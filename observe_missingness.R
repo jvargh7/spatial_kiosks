@@ -1,7 +1,10 @@
 library(arrow)
 library(data.table)
+library(ggplot2)
 library(here)
 library(tidyverse)
+library(sf)
+library(tigris)
 
 dt <- open_dataset(here("data", "emory-limited-data-set-export"),format = "parquet")# %>% 
   # mutate(session_received_utc_dt = ymd_hms(session_started_local_time, tz = "America/New_York")) %>% 
@@ -141,3 +144,33 @@ vars <- c( "ethnicity", "zipcode", "gender", "birth_year",
 
 df <- data.table::rbindlist(lapply(vars, tf))
 fwrite(df, here("data", "counts", "percent_missing.csv"))
+
+my <- data.table(MY)
+my[, state := toupper(state)]
+my <- my[, .(n = sum(n)), .(year, state)]
+my <- my[nchar(state) == 2]
+
+setnames(my, "state", "STUSPS")
+# Includes DC and PR
+state_sf <- tigris::states()
+my <- right_join(state_sf, my, by= "STUSPS")
+colsc <- function(...) {
+  scale_fill_gradientn(
+    colours = rev(RColorBrewer::brewer.pal(11, "RdYlBu")),
+    limits = range(..., na.rm = TRUE)
+  )
+}
+
+plt <- ggplot() + 
+  # geom_sf(data=st_geometry(my[!(my$STUSPS %in% c("AK", "HI", "PR")) & year == 2017,])) +
+  geom_sf(data=st_geometry(state_sf[state_sf$STUSPS == "MA",])) + 
+  # geom_sf(data = my[!(my$STUSPS %in% c("AK", "HI", "PR")) & my$year == 2017,], aes(fill=log(n)), col = "black") + 
+  geom_sf(data = my[!(my$STUSPS %in% c("AK", "HI", "PR")) ,], aes(fill=log(n)), col = "black") + 
+  facet_wrap(~year) + 
+  theme_bw() + 
+  colsc(seq(0,15.5,.01)) + 
+  ggtitle("Number of sessions per state-year")
+  
+pdf(file = here("data", "counts", "map_state_year.pdf"), width=11, height=8.5)
+print(plt)
+dev.off()
