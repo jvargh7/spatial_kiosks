@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=50G
+#SBATCH --mem-per-cpu=10G
 #SBATCH --time=00:30:00
 #SBATCH --partition=chang,preemptable,short-cpu,day-long-cpu
 #SBATCH --output=/scratch/thsiao3/output/cleandata_%A_%a.out

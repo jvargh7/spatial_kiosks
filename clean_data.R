@@ -5,16 +5,16 @@ library(here)
 
 # Main --------------------------------------------------------------------
 main <- function(){
-  nobs <- vector(mode = "list", length = 5)
-  names(nobs) <- c("Start", "Gender", "Age", "SBP", "DBP")
+  nobs <- vector(mode = "list", length = 6)
+  names(nobs) <- c("Start", "Gender", "Age", "SBP", "DBP", "Deduplicate")
   
   dt   <- open_dataset(here("data", "emory-limited-data-set-export-v2"),format = "parquet") 
   nobs[[1]] <- nrow(dt)
   
   # Mapping from Pursuant addresses to county/FIPS 
   map  <- fread(here("data", "reference", "pursuant_public_kiosk_address_w_county_CT_adj.csv"), 
-                colClasses = c(FIPS = 'character', address_id = 'character'))#[, .(street1, city, state, FIPS, county, urban)]
-  
+                colClasses = c(FIPS = 'character', address_id = 'character'))[, .(street1, state, FIPS, county, urban)]
+  hbp <- fread(here("data", "supplemental_hbp_cleaned.csv"))
   # Create year  -----------------------------------------
   message("Creating year variable")
   dt <- dt |> 
@@ -62,6 +62,8 @@ main <- function(){
 
   # Merge in supplemental data ----------------------------------------------
   message("Merge in supplemental response data (by session id)")
+  dt <- dt |>
+    left_join(hbp, by = "session_id_mask")
   
   # Merge geo data (recoding some addresses to match map) ----------------------------------------------------------
   message("Merge in Geo location data")
@@ -71,28 +73,35 @@ main <- function(){
     mutate(street1 = ifelse(street1 == "3101 W Kimberly Road", "3101 W Kimberly Rd", street1)) |>
     mutate(street1 = ifelse(street1 == "9820 Callabridge Court", "9820 Callabridge Ct", street1)) |>
     mutate(street1 = ifelse(street1 == "1600 E Tipton Street", "1600 E Tipton St", street1)) |>
+    mutate(state = ifelse(state == "Ak", "AK", state)) |>
     left_join(map, by = c("street1", "state"))
   
   # Age group categories (CDC National Diabetes categories and for raking) ----------------------------------------------------
-  dt <- dt |>
+  # Year ranges (2 yr range) ------------------------------------------------
+  dt_save <- dt |>
     mutate(age_group = ifelse(between(age, 20, 44), "20-44", 
                               ifelse(between(age, 45, 64), "45-64",
-                                     ifelse(age >=65, "65plus", "18-19"))))
+                                     ifelse(age >=65, "65plus", "18-19")))) |>
+    mutate(year_range = ifelse(between(year, 2017, 2018), "2017-2018",
+                               ifelse(between(year, 2019, 2020), "2019-2020",
+                                      ifelse(between(year, 2021, 2022), "2021-2022", "2023-2024")))) |>
+    select(session_id_mask, account_id_mask, pseudo_member_id, 
+           location_name, street1, FIPS, county, state, urban, 
+           year, year_range, 
+           age, age_group, gender, ethnicity, 
+           bp_systolic, bp_diastolic, hbp_diagnosis)
 
-  # Deal with repeated sessions ---------------------------------------------
-  
   # Save to disk ------------------------------------------------------------
   message("Collect and save final dataset to disk")
-  dt_save <- dt |>
-    select(session_id_mask, account_id_mask, pseudo_member_id, address_id,
-           year, FIPS, county, state, urban,
-           age, age_group, gender, ethnicity, bp_systolic, bp_diastolic) 
+  nobs[[6]] <- nrow(dt_save)
   
   arrow::write_dataset(dt_save, 
                        path = here("data", "kiosk-data-parquet-cleaned"), 
                        # partitioning = c("year", "age_group", "gender", "ethnicity", "urban"))
-                       partitioning = c("year"))
+                       partitioning = c("year_range", "gender", "ethnicity", "urban"))
   saveRDS(nobs, here("data", "nobs.rds"))
 }
 
+# Takes about 5-7 minutes to run
 main()
+
