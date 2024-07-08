@@ -1,4 +1,4 @@
-# Change all CT FIPS to the 9 Planning Regions in the map to count --------
+# Change all CT (Connecticut) FIPS to the 9 Planning Regions in the map to count --------
 library(data.table)
 library(sf)
 library(tidycensus)
