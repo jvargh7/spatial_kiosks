@@ -1,7 +1,7 @@
 rm(list=ls());gc();source(".Rprofile")
 
 
-emory_limited_dataset_export <- open_dataset(paste0(path_spatial_kiosks_folder,"/working/raw/emory-limited-data-set-export"),format = "parquet") %>% 
+emory_limited_dataset_export <- open_dataset(paste0(path_spatial_kiosks_folder,"/working/raw/emory-limited-data-set-export v2"),format = "parquet") %>% 
   mutate(session_received_utc_dt = ymd_hms(session_started_local_time)) %>% 
   mutate(year = year(session_received_utc_dt))
 
