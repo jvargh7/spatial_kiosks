@@ -14,11 +14,11 @@ census_pop = read_csv(paste0(path_spatial_kiosks_folder,"/working/raw/DECENNIALD
                                        pop_1000s < 8000 ~ 3,
                                        TRUE ~ NA_real_)) %>% 
   mutate(data_value_groups=factor(data_value_groups,levels=c(1:3),
-                                  labels=c("0-49.9", "50-999.9","1000-8000")))
+                                  labels=c("0 to <50", "50 to <1000","1000 to <8000")))
 
 # Read counties shapefile
 # county_boundaries <- st_read(dsn = paste0(path_cms_mdpp_folder,"/working/tl_2022_us_county"))
-county_boundaries <- tigris::counties(class="sf",cb=TRUE) %>%
+county_boundaries <- tigris::counties(class="sf",cb=TRUE,year = 2020) %>%
   left_join(census_pop %>% 
               dplyr::select(fips,pop_1000s,data_value_groups),
             by=c("GEOID"="fips")) %>% 
@@ -40,7 +40,7 @@ figA_pop_1000s <- ggplot() +
   xlab("") +
   ylab("") +
   # scale_fill_gradient(name="",low = "lightblue",high="darkblue",na.value="grey90",limits=c(0,100)) +
-  scale_fill_manual(name="",values=c("0-49.9" = "#027324","50-999.9" ="#56B4E9","1000-8000" = "#FF6961"),na.value="grey90") +
+  scale_fill_manual(name="",values=c("0 to <50" = "#E69F00","50 to <1000" ="#56B4E9","1000 to <8000" = "#FF6961"),na.value="#027324") +
   theme(legend.position = "bottom",
         title = element_text(size = 14),
         legend.text = element_text(size = 14))

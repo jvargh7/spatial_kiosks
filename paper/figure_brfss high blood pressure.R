@@ -12,7 +12,7 @@ highbp = readRDS(paste0(path_spatial_kiosks_folder,"/working/cleaned/skbr01_high
                                        data_value <=100 ~ 5,
                                        TRUE ~ NA_real_)) %>% 
   mutate(data_value_groups=factor(data_value_groups,levels=c(1:5),
-                                  labels=c("0-19.9","20-39.9","40-59.9","60-79.9","80-100")))
+                                  labels=c("0 to <20","20 to <40","40 to <60","60 to <80","80-100")))
 
 
 # Read counties shapefile
@@ -39,7 +39,7 @@ figA_highbp <- ggplot() +
   xlab("") +
   ylab("") +
   # scale_fill_gradient(name="",low = "lightblue",high="darkblue",na.value="grey90",limits=c(0,100)) +
-  scale_fill_manual(name="",values=c("0-19.9" = "#027324","20-39.9" = "#449050","40-59.9" ="#56B4E9","60-79.9"="#E69F00","80-100" = "#FF6961"),na.value="grey90") +
+  scale_fill_manual(name="",values=c("0 to <20" = "#027324","20 to <40" = "#449050","40 to <60" ="#56B4E9","60 to <80"="#E69F00","80-100" = "#FF6961"),na.value="grey90") +
   theme(legend.position = "bottom",
         title = element_text(size = 14),
         legend.text = element_text(size = 14))
