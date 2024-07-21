@@ -6,8 +6,19 @@ library(data.table)
 # Identify which addresses in the Pursuant dataset are not in the Pursuant address map--------
 dt   <- open_dataset(here("data", "emory-limited-data-set-export-v2"),format = "parquet") 
 map  <- fread(here("data", "reference", "pursuant_public_kiosk_address_w_county_CT_adj.csv"), 
-              colClasses = c(FIPS = 'character'))#[, .(street1, city, state, FIPS, county, urban)]
-address <- dt |> count(street1, city, state) |> collect()
+              colClasses = c(FIPS = 'character', zipcode = 'character'))#[, .(street1, city, state, FIPS, county, urban)]
+address <- dt |> count(street1, street2, city, state, zipcode) |> collect() |> data.table()
+
+a <- address[, paste(street1, street2, city, state, zipcode)] %in% map[,paste(street1, street2, city, state, zipcode)]
+a <- address[, paste(street1, state, zipcode)] %in% map[,paste(street1,  state, zipcode)]
+
+miss <- address[!a]
+
+map[street1 == "1601 West Edgar Road"]
+
+address[street1 == "1601 West Edgar Road"]
+
+address <- data.table(address)
 
 # All addresses in the dataset which are not in the map
 address$street1[!(address$street1 %in% map$street1)]
