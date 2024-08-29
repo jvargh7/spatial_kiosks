@@ -59,8 +59,9 @@ dt_nrow <- data.table(state = STATE, year_range = YEAR_RANGE, nrow_all = nrow_al
            nrow_id = nrow_id)
 
 # Final -------------------------------------------------------------------
-# Compute hypertension indicator
+# Compute hypertension indicators for stage 1 and stage 2
 dt_id[, hbp := hbp_diagnosis == 1 | bp_systolic >= 140 | bp_diastolic >= 90]
+dt_id[, hbp_stage1 := hbp_diagnosis == 1 | bp_systolic >= 130 | bp_diastolic >= 80]
 
 ID   <- sprintf("%03d", TASK_ID)
 file <- paste0(ID, "_", STATE, "_", YEAR_RANGE, ".csv")

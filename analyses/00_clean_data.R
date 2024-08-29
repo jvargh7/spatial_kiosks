@@ -16,6 +16,7 @@ main <- function(){
                 colClasses = c(FIPS = 'character'))[, .(street1, street2, city, state, zipcode, 
                                                                                   FIPS, county, urban)] |> unique()
   hbp <- fread(here("data", "supplemental_hbp_cleaned.csv"))
+  
   # Create year  -----------------------------------------
   message("Creating year variable")
   dt <- dt |> 
@@ -91,6 +92,7 @@ main <- function(){
                                ifelse(between(year, 2019, 2020), "2019-2020",
                                       ifelse(between(year, 2021, 2022), "2021-2022", "2023-2024")))) |>
     select(session_id_mask, account_id_mask, pseudo_member_id, 
+           session_received_utc, session_started_local_time,
            #location_name, street1, 
            FIPS, county, state, urban, 
            year, year_range, 
@@ -102,7 +104,7 @@ main <- function(){
   nobs[[7]] <- nrow(dt_save)
   
   arrow::write_dataset(dt_save, 
-                       path = here("data", "kiosk-data-parquet-cleaned-4"), 
+                       path = here("data", "kiosk-data-parquet-cleaned-5"), 
                        # partitioning = c("year", "age_group", "gender", "ethnicity", "urban"))
                        partitioning = c("year_range", "gender", "ethnicity", "urban"))
   saveRDS(nobs, here("data", "nobs.rds"))
