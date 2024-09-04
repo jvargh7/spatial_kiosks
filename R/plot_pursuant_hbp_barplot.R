@@ -23,7 +23,11 @@ compute_summary <- function(dt, variable, YEAR_RANGE = NULL){
 
 # Sex-ethnicity -----------------------------------------------------------
 
-plot_pursuant_hbp_by_ethnicity_gender_barchart <- function(dt, YEAR_RANGE = NULL){
+plot_pursuant_hbp_by_ethnicity_gender_barchart <- function(dt, YEAR_RANGE = NULL, stage1 = FALSE){
+  if(stage1){
+    dt <- dt |>
+      mutate(hbp = hbp_stage1)
+  }
   NHHES <- tibble(ethnicity=rep(c("NH White", "NH Black", "Hispanic"), times = 3), 
                   gender=rep(c("All", "Men", "Women"), each = 3), 
                   hbp=c(.436, .571, .437, .502, .572, .501, .367, .567, .368), 
@@ -60,23 +64,27 @@ plot_pursuant_hbp_by_ethnicity_gender_barchart <- function(dt, YEAR_RANGE = NULL
     facet_wrap(~type, labeller = labeller(type = label_wrap_gen(width = 50)))
 }
 
-plot_pursuant_hbp_by_agegroup_gender_barchart <- function(dt, YEAR_RANGE = NULL){
+plot_pursuant_hbp_by_agegroup_gender_barchart <- function(dt, YEAR_RANGE = NULL, stage1 = FALSE){
+  if(stage1){
+    dt <- dt |>
+      mutate(hbp = hbp_stage1)
+  }
   plot_df <- 
     # Age group only
-    compute_summary(dt, variable = "age_group", YEAR_RANGE = "2017-2018") |>
+    compute_summary(dt, variable = "age_group", YEAR_RANGE = YEAR_RANGE) |>
       mutate(gender = "All") |>
     # Age group + gender
       rbind( 
-        compute_summary(dt, c("age_group", "gender"), YEAR_RANGE = "2017-2018")
+        compute_summary(dt, c("age_group", "gender"), YEAR_RANGE = YEAR_RANGE)
       ) |>
     # No variable, all
       rbind(
-        compute_summary(dt, variable = NULL, YEAR_RANGE = "2017-2018") |>
+        compute_summary(dt, variable = NULL, YEAR_RANGE = YEAR_RANGE) |>
           mutate(gender = "All", age_group = ">18")
       ) |>
     # Gender only
       rbind(
-        compute_summary(dt, variable = "gender", YEAR_RANGE = "2017-2018") |>
+        compute_summary(dt, variable = "gender", YEAR_RANGE = YEAR_RANGE) |>
           mutate(age_group = ">18")
       ) |> 
       mutate(age_group = factor(age_group, levels = c(">18", "18-44", "45-64", "65plus"),

@@ -34,5 +34,17 @@ generate_Table1 <- function(dt){
 
   saveRDS(list(Column2 = Column2_all_sessions,
                Column3 = Column3_all_pseudo_id,
-               Column4 = Column4_all_pseudo_id), here("tables", "Table1.rds") )
+               Column4 = Column4_all_pseudo_id), here("tables", "Table1_HQ.rds") )
 }
+
+# generate_Table1 <- function(dt){
+#   all_vars <- c("age_group", "gender", "ethnicity", "urban")
+#   
+#   Column2_all_sessions <- lapply(all_vars, Table1_compute_counts, dt = dt, by_pseudo_id = FALSE, year_range = NULL)
+#   Column3_all_pseudo_id <- lapply(all_vars, Table1_compute_counts, dt = dt, by_pseudo_id = TRUE, year_range = NULL)
+#   Column4_all_pseudo_id <- lapply(all_vars, Table1_compute_counts, dt = dt, by_pseudo_id = FALSE, year_range = "2021-2022")
+# 
+#   saveRDS(list(Column2 = Column2_all_sessions,
+#                Column3 = Column3_all_pseudo_id,
+#                Column4 = Column4_all_pseudo_id), here("tables", "Table1.rds") )
+# }

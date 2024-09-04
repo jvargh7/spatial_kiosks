@@ -53,20 +53,32 @@ plot_pursuant_county_nobs <- function(dt, YEAR_RANGE = NULL){
     count(FIPS, county, state, urban) |>
     collect() |>
     mutate(FIPS = sprintf("%05d", FIPS)) |>
-    mutate(n = n / 1000) |>
-    mutate(data_value_groups = case_when(n < 5 ~ 1,
-                                         n < 10 ~ 2,
-                                         n < 50 ~ 3,
-                                         n < 100 ~ 4,
-                                         n < 500 ~ 5,
-                                         n < 750 ~ 6)) |>
-    mutate(data_value_groups = factor(data_value_groups, levels = c(1:6),
-                                      labels = c(">0 to <5", 
-                                                 "5 to <10", 
-                                                 "10 to <50",
-                                                 "50 to <100", 
-                                                 "100 to <500", 
-                                                 "500 to <750"))  )
+    # mutate(n = n / 1000) |>
+    mutate(n = n ) |>
+    mutate(data_value_groups = case_when(n < 250 ~ 1,
+                                         n < 500 ~ 2,
+                                         n < 1000 ~ 3,
+                                         n < 10000 ~ 4,
+                                         n < 30000 ~ 5)) |>
+    mutate(data_value_groups = factor(data_value_groups, levels = c(1:5),
+                                      labels = c(">0 to <250", 
+                                                 "250 to <500", 
+                                                 "500 to <1K",
+                                                 "1K to <10K", 
+                                                 "10K to <30K"))  )
+    # mutate(data_value_groups = case_when(n < 5 ~ 1,
+    #                                      n < 10 ~ 2,
+    #                                      n < 50 ~ 3,
+    #                                      n < 100 ~ 4,
+    #                                      n < 500 ~ 5,
+    #                                      n < 750 ~ 6)) |>
+    # mutate(data_value_groups = factor(data_value_groups, levels = c(1:6),
+    #                                   labels = c(">0 to <5", 
+    #                                              "5 to <10", 
+    #                                              "10 to <50",
+    #                                              "50 to <100", 
+    #                                              "100 to <500", 
+    #                                              "500 to <750"))  )
   
   # Read in previously saved `sf` objects for county/state boundaries
   county_boundaries <- readRDS(here("data", "reference", "county_boundaries_2022.rds")) |>
