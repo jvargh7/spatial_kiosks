@@ -4,7 +4,7 @@ library(lme4)
 
 if(interactive()){
   YEAR_RANGE <- "2017-2018"
-  IND        <- "hbp"
+  IND        <- "hbp_bp"
   STAGE      <- "stage2"
   STATUS     <- "prevalence"
 } else{
@@ -23,20 +23,22 @@ dt <- fread(here("data", "high_quality_dataset_meanBP_w_covariates.csv"),
 # Filter based on indicator
 prev_var <- paste0("hbp_", STAGE)
 if(IND == "hbp_diagnosis"){
-  # Prevalent
-  index       <- dt[, get(prev_var)]
+  # index       <- dt[, get(prev_var)]
+  # P(hypertension, aware)
   outcome_var <- "hbp_diagnosis"
 } else if(IND == "hbp_bp"){
-  # Prevalent and aware
-  index <- dt[, get(prev_var) & hbp_diagnosis]
+  # index <- dt[, get(prev_var) & hbp_diagnosis]
   outcome_var <- paste0("hbp_bp_", STAGE)
+  # Redefine outcome variable to be P(hypertension, aware, uncontrolled) rather than P(uncontrolled | aware)
+  # We model the joint probability directly since it is more straightforward to perform post-stratification
+  dt[, (outcome_var) := get(outcome_var) & hbp_diagnosis]
 } else{
-  # Prevalence
-  index <- 1:nrow(dt)
+  # index <- 1:nrow(dt)
+  # P(hypertension)
   outcome_var <- prev_var
 }
 
-dt <- dt[index]
+# dt <- dt[index]
 
 # Change to factors with reference levels ---------------------------------
 dt[, age_group := factor(age_group)]
