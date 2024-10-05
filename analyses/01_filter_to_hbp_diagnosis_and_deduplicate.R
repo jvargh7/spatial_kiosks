@@ -4,20 +4,20 @@ library(dplyr)
 library(here)
 
 # Code --------------------------------------------------------------------
-# pursuant   <- open_dataset(here("data", "kiosk-data-parquet-cleaned-5"),
-#                            format = "parquet") 
+pursuant   <- open_dataset(here("data", "kiosk-data-parquet-cleaned-Sept24"),
+                           format = "parquet")
 # > nrow(pursuant)
 # [1] 79352233
 
 # Filter down to high quality data (has HBP diagnosis)
-# pursuant_hbp_dt <- pursuant |> 
-#   filter(hbp_diagnosis %in% c(0, 1)) |>
-#   collect() |>
-#   data.table()
+pursuant_hbp_dt <- pursuant |>
+  filter(hbp_diagnosis %in% c(0, 1)) |>
+  collect() |>
+  data.table()
 # 
-# fwrite(pursuant_hbp_dt, here("data/pursuant_hbp_dt.csv") )
+fwrite(pursuant_hbp_dt, here("data/pursuant_hbp_dt_Sept24.csv") )
 
-pursuant_hbp_dt <- fread(here("data/pursuant_hbp_dt.csv"), colClasses = list(character = "FIPS") )
+pursuant_hbp_dt <- fread(here("data/pursuant_hbp_dt_Sept24.csv"), colClasses = list(character = "FIPS") )
 
 # nrow(pursuant_hbp_dt)
 # [1] 1280717
@@ -88,4 +88,4 @@ pursuant_hbp <- acct |>
 # no mean: 1,213,188
 # no mean: 1,213,188
 
-fwrite(pursuant_hbp, "data/high_quality_dataset_meanBP.csv")
+fwrite(pursuant_hbp, here("data/high_quality_dataset_meanBP_Sept24.csv"))

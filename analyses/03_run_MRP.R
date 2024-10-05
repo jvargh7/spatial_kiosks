@@ -4,7 +4,7 @@ library(lme4)
 
 if(interactive()){
   YEAR_RANGE <- "2017-2018"
-  IND        <- "hbp_bp"
+  IND        <- "hbp"
   STAGE      <- "stage2"
   STATUS     <- "prevalence"
 } else{
@@ -17,7 +17,7 @@ if(interactive()){
   STATUS     <- taskmap[ID, status]
 }
 
-dt <- fread(here("data", "high_quality_dataset_meanBP_w_covariates.csv"), 
+dt <- fread(here("data", "high_quality_dataset_meanBP_w_covariates_Sept24.csv"), 
             colClasses = list(character = "FIPS"))[year_range == YEAR_RANGE]
 
 # Filter based on indicator
@@ -56,17 +56,18 @@ dt[, state_region := factor(state_region, levels = c("Northeast", "South", "Nort
 #   urbanicity, unemployment rate, no HS degree rate, median household income, and region of state
 
 formula <- as.formula(paste0(outcome_var, " ~ ", 
-                    "(1|state/FIPS) + (1|ethnicity) + (1|age_group) + (1|ethnicity:gender) + 
-                        gender + urban + UE_rate + no_HS_rate + median_income + state_region"))
+                    # "(1|state/FIPS) + (1|ethnicity) + (1|age_group) + (1|ethnicity:gender) + 
+                    "(1|state/FIPS) + age_group + ethnicity*gender + 
+                        urban + UE_rate + no_HS_rate + median_income + HI_coverage + state_region"))
 
 fit.glmer <- glmer(
   formula,
   family = binomial(link = "logit"),
   data = dt,
-  nAGQ = 0L,
+  nAGQ = 1L,
   verbose = 1,
   control = glmerControl(optimizer = "nloptwrap")
 )
 
-filename <- paste0("glmer_", YEAR_RANGE, "_", STATUS, "_", STAGE, ".rds")
-saveRDS(fit.glmer, file = here("outputs", filename))
+filename <- paste0("glmer_", YEAR_RANGE, "_", STATUS, "_", STAGE, "_fixed-demo.rds")
+saveRDS(fit.glmer, file = here("outputs-Sept24", filename))

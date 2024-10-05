@@ -8,14 +8,14 @@ main <- function(){
   nobs <- vector(mode = "list", length = 7)
   names(nobs) <- c("Start", "Race", "Gender", "Age", "SBP", "DBP", "Deduplicate")
   
-  dt   <- open_dataset(here("data", "emory-limited-data-set-export-v2"),format = "parquet") 
+  dt   <- open_dataset(here("data", "emory-limited-data-set-export-Sept24"),format = "parquet") 
   nobs[[1]] <- nrow(dt)
   
   # Mapping from Pursuant addresses to county/FIPS 
   map  <- fread(here("data", "reference", "pursuant_public_kiosk_address_w_county_CT_adj.csv"), 
                 colClasses = c(FIPS = 'character'))[, .(street1, street2, city, state, zipcode, 
                                                                                   FIPS, county, urban)] |> unique()
-  hbp <- fread(here("data", "supplemental_hbp_cleaned.csv"))
+  hbp <- fread(here("data", "supplemental_hbp_cleaned_Sept24.csv"))
   
   # Create year  -----------------------------------------
   message("Creating year variable")
@@ -104,7 +104,7 @@ main <- function(){
   nobs[[7]] <- nrow(dt_save)
   
   arrow::write_dataset(dt_save, 
-                       path = here("data", "kiosk-data-parquet-cleaned-5"), 
+                       path = here("data", "kiosk-data-parquet-cleaned-Sept24"), 
                        # partitioning = c("year", "age_group", "gender", "ethnicity", "urban"))
                        partitioning = c("year_range", "gender", "ethnicity", "urban"))
   saveRDS(nobs, here("data", "nobs.rds"))

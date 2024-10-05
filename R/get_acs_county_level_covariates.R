@@ -1,42 +1,85 @@
+library(dplyr)
+library(tidycensus)
+
 get_acs_county_level_covariates <- function(){
-  # Set variables
-  variables <- c(
-    unemployed = "B23025_005",
-    labor_force = "B23025_002",
-    total_population_25_over = "B15003_001",
-    no_high_school = "B15003_002",
-    median_income = "B19013_001"
-  )
   
-  # Retrieve data for all counties
-  acs_data <- tidycensus::get_acs(
+  # Health insurance coverage
+  denom <- c(seq(9, 27, 3), seq(37, 55, 3))
+  num   <- denom + 1
+  
+  HI_num_variables   <- paste0("B27001_", sprintf("%03d", num))
+  HI_denom_variables <- paste0("B27001_", sprintf("%03d", denom))
+  
+  acs_num <- tidycensus::get_acs(
     geography = "county",
-    variables = variables,
+    variables = HI_num_variables,    # All educational attainment below HS diploma
+    # summary_var = "B15003_001",   # Total population 25+
     year = 2022,
     survey = "acs5",
     cache_table = TRUE
-  )
+  ) |>
+     group_by(GEOID) |>
+     summarise(num = sum(estimate) )
   
-  # Clean and calculate the percentage of residents unemployed and without a high school education
-  acs_data_clean <- acs_data |>
-    tidyr::pivot_wider(id_cols = c("GEOID", "NAME"), 
-                       names_from = "variable",
-                       values_from = "estimate") |>
-    dplyr::mutate(
-      UE_rate = (unemployed / labor_force) * 100,
-      no_HS_rate = (no_high_school / total_population_25_over) * 100,
-      state_code = substr(GEOID, 1, 2)
-    ) |>
-    dplyr::select(
-      GEOID,
-      NAME,
-      state_code,
-      UE_rate,
-      no_HS_rate,
-      median_income
-    )  |>
-    dplyr::rename(FIPS = GEOID)
-  return(acs_data_clean)
+  acs_denom <- tidycensus::get_acs(
+    geography = "county",
+    variables = HI_denom_variables,    # All educational attainment below HS diploma
+    year = 2022,
+    survey = "acs5",
+    cache_table = TRUE
+  ) |>
+     group_by(GEOID) |>
+     summarise(denom = sum(estimate) )
+  
+  acs_data_HI <- acs_num |>
+    left_join(acs_denom, by = "GEOID") |>
+    mutate(HI_coverage = num / denom * 100,
+           num = NULL, denom = NULL)
+  
+  # Median HHI
+  acs_data_HHI <- tidycensus::get_acs(
+    geography = "county",
+    variables = "B19013_001", 
+    year = 2022,
+    survey = "acs5",
+    cache_table = TRUE
+  ) |>
+    select(GEOID, NAME, estimate) |>
+    rename(median_income = estimate)
+  
+  # Unemployment rate
+  acs_data_UE <- tidycensus::get_acs(
+    geography = "county",
+    variables = "B23025_005",   # Unemployed (Civilian)
+    summary_var = "B23025_003", # Labor force (Civilian)
+    year = 2022,
+    survey = "acs5",
+    cache_table = TRUE
+  ) |>
+    group_by(GEOID) |>
+    summarise(UE_rate = sum(estimate) / mean(summary_est) * 100 )
+  
+  # Educational attainment
+  edu_variables <- paste0("B15003_", sprintf("%03d", 2:16))
+  acs_data_HS <- tidycensus::get_acs(
+    geography = "county",
+    variables = edu_variables,    # All educational attainment below HS diploma
+    summary_var = "B15003_001",   # Total population 25+
+    year = 2022,
+    survey = "acs5",
+    cache_table = TRUE
+  ) |>
+    group_by(GEOID) |>
+    summarise(no_HS_rate = sum(estimate) / mean(summary_est) * 100 )
+  
+  acs_data <- acs_data_HHI |>
+    left_join(acs_data_HI) |>
+    left_join(acs_data_HS) |>
+    left_join(acs_data_UE) |>
+    mutate(state_code = substr(GEOID, 1, 2)) |>
+    rename(FIPS = GEOID) 
+  
+  return(acs_data)
 }
 
 get_state_level_covariates <- function(){

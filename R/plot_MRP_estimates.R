@@ -18,17 +18,17 @@ plot_pursuant_county_hbp_unadjusted <- function(dt, YEAR_RANGE = "2021-2022"){
     summarise(hbp = mean(hbp)) |>
     mutate(hbp = 100*hbp) |>
     mutate(hbp_groups = case_when(hbp <40 ~ 1,
-                                 hbp < 60 ~ 2,
-                                 hbp < 75 ~ 3)) |>
+                                  hbp < 60 ~ 2,
+                                  hbp < 75 ~ 3)) |>
     collect() |>
     mutate(hbp_groups = factor(hbp_groups, levels = 1:3,
-                              labels = c("20 to <40", "40 to <60", "60 to <75"))) |>
+                               labels = c("20 to <40", "40 to <60", "60 to <75"))) |>
     mutate(FIPS = sprintf("%05d", FIPS)) 
   
   # Read in previously saved `sf` objects for county/state boundaries
   county_boundaries <- readRDS(here("data", "reference", "county_boundaries_2022.rds")) |>
-                        left_join(hbp |> dplyr::select(FIPS, hbp, hbp_groups), 
-                                  by = c("GEOID" = "FIPS"))
+    left_join(hbp |> dplyr::select(FIPS, hbp, hbp_groups), 
+              by = c("GEOID" = "FIPS"))
   state_boundaries <- readRDS(here("data", "reference", "state_boundaries_2022.rds"))
   
   # Figure for HBP
@@ -48,54 +48,50 @@ plot_pursuant_county_hbp_unadjusted <- function(dt, YEAR_RANGE = "2021-2022"){
 #' Function to plot number of Pursuant observations by county over a year range
 #' 
 #' @inheritParams plot_pursuant_county_hbp_unadjusted
-plot_pursuant_county_nobs <- function(){
-  dt <- fread(here("data/high_quality_dataset_meanBP_w_covariates.csv"), 
-              colClasses = list(character = "FIPS")) |>
+plot_pursuant_county_nobs <- function(dt, YEAR_RANGE = NULL){
+  nobs <- dt |>
     count(FIPS, county, state, urban) |>
-    # mutate(FIPS = sprintf("%05d", FIPS)) |>
+    collect() |>
+    mutate(FIPS = sprintf("%05d", FIPS)) |>
     # mutate(n = n / 1000) |>
     mutate(n = n ) |>
-    mutate(data_value_groups = case_when(n < 100 ~ 1,
-                                         n < 200 ~ 2,
-                                         n < 300 ~ 3,
-                                         n < 700 ~ 4,
+    mutate(data_value_groups = case_when(n < 250 ~ 1,
+                                         n < 500 ~ 2,
+                                         n < 1000 ~ 3,
+                                         n < 10000 ~ 4,
                                          n < 30000 ~ 5)) |>
     mutate(data_value_groups = factor(data_value_groups, levels = c(1:5),
-                                      labels = c(">0 to <100", 
-                                                 "100 to <200", 
-                                                 "200 to <300",
-                                                 "300 to <700", 
-                                                 "700 to <30K"))  )
-    # mutate(data_value_groups = case_when(n < 5 ~ 1,
-    #                                      n < 10 ~ 2,
-    #                                      n < 50 ~ 3,
-    #                                      n < 100 ~ 4,
-    #                                      n < 500 ~ 5,
-    #                                      n < 750 ~ 6)) |>
-    # mutate(data_value_groups = factor(data_value_groups, levels = c(1:6),
-    #                                   labels = c(">0 to <5", 
-    #                                              "5 to <10", 
-    #                                              "10 to <50",
-    #                                              "50 to <100", 
-    #                                              "100 to <500", 
-    #                                              "500 to <750"))  )
+                                      labels = c(">0 to <250", 
+                                                 "250 to <500", 
+                                                 "500 to <1K",
+                                                 "1K to <10K", 
+                                                 "10K to <30K"))  )
+  # mutate(data_value_groups = case_when(n < 5 ~ 1,
+  #                                      n < 10 ~ 2,
+  #                                      n < 50 ~ 3,
+  #                                      n < 100 ~ 4,
+  #                                      n < 500 ~ 5,
+  #                                      n < 750 ~ 6)) |>
+  # mutate(data_value_groups = factor(data_value_groups, levels = c(1:6),
+  #                                   labels = c(">0 to <5", 
+  #                                              "5 to <10", 
+  #                                              "10 to <50",
+  #                                              "50 to <100", 
+  #                                              "100 to <500", 
+  #                                              "500 to <750"))  )
   
   # Read in previously saved `sf` objects for county/state boundaries
   county_boundaries <- readRDS(here("data", "reference", "county_boundaries_2022.rds")) |>
-                        dplyr::left_join(dt |> 
-                                           dplyr::select(FIPS, n, data_value_groups), 
-                                  by = c("GEOID" = "FIPS"))
+    left_join(nobs |> dplyr::select(FIPS, n, data_value_groups), 
+              by = c("GEOID" = "FIPS"))
   state_boundaries <- readRDS(here("data", "reference", "state_boundaries_2022.rds"))
   
   # Figure for HBP
   fig_pursuant_nobs <- ggplot() +
-    geom_sf(data=county_boundaries,aes(fill = data_value_groups))  +
+    geom_sf(data=county_boundaries,aes(fill = data_value_groups),col=NA)  +
     geom_sf(data=state_boundaries,col="black",fill=NA)  +
     coord_sf(crs = 5070, datum = NA) +
-    scale_fill_brewer(palette = "Blues", na.value = "#027324", name = "Number of observations") +
+    scale_fill_brewer(palette = "Blues", na.value = "#027324", name = "") +
     theme_map
   return(fig_pursuant_nobs)
 }
-
-fig_nobs <- plot_pursuant_county_nobs()
-ggsave("Figure_nobs.png", width = 11, height = 8.5)

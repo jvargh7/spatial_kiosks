@@ -11,11 +11,12 @@ dt.state  <- get_state_level_covariates()
 rucc      <- readr::read_csv(here("data", "reference", "RUCC2023.csv")) |>
   mutate(urban = ifelse(urban == 1, "urban", "rural"))
 
-# Standardize covariates (county level)
+# Standardize covariates (county level) and remove PR
 dt <- dt.county |>
   dplyr::left_join(dt.state, by = "state_code") |>
   dplyr::filter(state != "PR") |>
   dplyr::mutate(UE_rate = (UE_rate - mean(UE_rate)) / sd(UE_rate),
+                HI_coverage = (HI_coverage - mean(HI_coverage)) / sd(HI_coverage),
                 no_HS_rate = (no_HS_rate - mean(no_HS_rate)) / sd(no_HS_rate),
                 median_income = (median_income - mean(median_income, na.rm = TRUE)) / sd(median_income, na.rm = TRUE) ) |>
   # Loving County, TX

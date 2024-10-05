@@ -11,8 +11,8 @@ library(tidycensus)
 # gender: M/F
 # # ethnicity: nh white, nh black, nh asian, nh other, hispanic (race5)
 # write_path <- here("data", "reference")
-# variables_2020 <- load_variables(2020, "pl", cache = TRUE)
-# vars       <- load_variables(2022, "acs1", cache = TRUE) |> data.table::data.table()
+variables_2020 <- load_variables(2020, "pl", cache = TRUE)
+vars       <- load_variables(2022, "acs1", cache = TRUE) |> data.table::data.table()
 # fwrite(vars, here(write_path, "ACS2022_variables.csv") )
 
 # Load variables related to Hispanic origin and race%

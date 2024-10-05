@@ -19,7 +19,7 @@ cd /projects/waller/spatial_kiosks/analyses
 SINGULARITY_IMAGE=~/singularity-images/geospatial_4.2.2.sif
 
 # Path to the R script
-R_SCRIPT=clean_data.R
+R_SCRIPT=00_clean_data.R
 
 # Launch Singularity Job
 srun singularity exec --bind /projects:/projects --bind /scratch:/scratch $SINGULARITY_IMAGE Rscript $R_SCRIPT
