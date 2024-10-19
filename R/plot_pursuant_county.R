@@ -49,7 +49,7 @@ plot_pursuant_county_hbp_unadjusted <- function(dt, YEAR_RANGE = "2021-2022"){
 #' 
 #' @inheritParams plot_pursuant_county_hbp_unadjusted
 plot_pursuant_county_nobs <- function(){
-  dt <- fread(here("data/high_quality_dataset_meanBP_w_covariates.csv"), 
+  dt <- fread(here("data/high_quality_dataset_meanBP_w_covariates_Sept24.csv"), 
               colClasses = list(character = "FIPS")) |>
     count(FIPS, county, state, urban) |>
     # mutate(FIPS = sprintf("%05d", FIPS)) |>
@@ -96,6 +96,3 @@ plot_pursuant_county_nobs <- function(){
     theme_map
   return(fig_pursuant_nobs)
 }
-
-fig_nobs <- plot_pursuant_county_nobs()
-ggsave("Figure_nobs.png", width = 11, height = 8.5)

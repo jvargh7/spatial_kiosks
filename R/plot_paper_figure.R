@@ -98,7 +98,7 @@ Figure_state_comparison <- function(YR = "2021-2022", outcome = "prevalence", st
     mutate(type = "Model-adjusted", 
            level = "National", state = "National")
   
-  data_est <- here("data/high_quality_dataset_meanBP_w_covariates.csv") |> 
+  data_est <- here("data/high_quality_dataset_meanBP_w_covariates_Sept24.csv") |> 
                   fread(colClasses = list(character = "FIPS")) |>
                   filter(year_range == YR) |>
                   group_by(state) |>
@@ -152,7 +152,6 @@ Figure_state_comparison <- function(YR = "2021-2022", outcome = "prevalence", st
                                       fill = type,
                                       group = type), alpha = 0.2) +
     theme(text = element_text(size = 10))
-  
   
   return(plt)
 } 

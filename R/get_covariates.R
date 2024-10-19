@@ -1,7 +1,7 @@
 library(dplyr)
 library(tidycensus)
 
-get_acs_county_level_covariates <- function(){
+get_county_level_covariates <- function(){
   
   # Health insurance coverage
   denom <- c(seq(9, 27, 3), seq(37, 55, 3))

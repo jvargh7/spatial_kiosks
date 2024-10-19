@@ -1,5 +1,4 @@
 library(dplyr)
-library(here)
 library(sf)
 library(tigris)
 
@@ -20,15 +19,4 @@ get_boundaries <- function(level = "county", year = 2022, ...){
     dplyr::filter(STATEFP < 60) 
   
   return(boundaries)
-}
-
-# Write files if not in data/reference ------------------------------------
-files <- c(here("data", "reference", "county_boundaries_2022.rds"),
-           here("data", "reference", "state_boundaries_2022.rds"))
-if(all(!file.exists(files))){
-  county <- get_boundaries("county", 2022)
-  state  <- get_boundaries("state", 2022)
-  
-  saveRDS(county, file = files[1]  )
-  saveRDS(state, file = files[2] )
 }
