@@ -20,11 +20,9 @@ poststratification <- function(YR = "2017-2018",
                                seed = 123, ...){ 
   model_name <- paste(YR, outcome, stage, sep = "_")
   
-  # Random effects for demographic variables
-  # fit <- readRDS(here("outputs", paste0("glmer_", model_name, ".rds")))
   # Fixed effects for demographic variables
-  fit <- readRDS(here("outputs", paste0("glmer_", model_name, "_fixed-demo.rds")))
-  ps  <- fread( here("data/poststratification_table.csv"), 
+  fit <- readRDS(here("results", "models", paste0("glmer_", model_name, ".rds")))
+  ps  <- fread( here("data/reference/poststratification_table.csv"), 
                          colClasses = list(character = c("FIPS", "state_code")))
   
   # If just need point estimate (county and state maps)
@@ -42,9 +40,8 @@ poststratification <- function(YR = "2017-2018",
   if(compute.PI){
     
     # Filename for prediction simulations
-    # filename <- paste0("sims_PI_",n.sims, "_", model_name, ".rds")
-    filename <- paste0("sims_PI_",n.sims, "_", model_name, "_fixed-demo.rds")
-    filepath <- here("outputs", filename)
+    filename <- paste0("sims_PI_",n.sims, "_", model_name, ".rds")
+    filepath <- here("results", "draws", filename)
     if(file.exists(filepath)){
       preds <- readRDS(filepath)
     } else{
