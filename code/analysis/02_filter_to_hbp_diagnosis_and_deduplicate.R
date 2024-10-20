@@ -4,23 +4,21 @@ library(dplyr)
 library(here)
 
 # Code --------------------------------------------------------------------
-pursuant   <- open_dataset(here("data", "kiosk-data-parquet-cleaned-Sept24"),
+pursuant   <- open_dataset(here("data", 
+                                "processed", 
+                                "kiosk-data-parquet-cleaned-Sept24"),
                            format = "parquet")
-# > nrow(pursuant)
-# [1] 79352233
 
 # Filter down to high quality data (has HBP diagnosis)
 pursuant_hbp_dt <- pursuant |>
   filter(hbp_diagnosis %in% c(0, 1)) |>
   collect() |>
   data.table()
-# 
-fwrite(pursuant_hbp_dt, here("data/pursuant_hbp_dt_Sept24.csv") )
+ 
+fwrite(pursuant_hbp_dt, here("data/processed/high_quality_dt_before_deduplication_Sept24.csv") )
 
-pursuant_hbp_dt <- fread(here("data/pursuant_hbp_dt_Sept24.csv"), colClasses = list(character = "FIPS") )
-
-# nrow(pursuant_hbp_dt)
-# [1] 1280717
+# pursuant_hbp_dt <- fread(here("data/processed/high_quality_dt_before_deduplication_Sept24.csv"), 
+#                          colClasses = list(character = "FIPS") )
 
 # Compute hypertension indicators 
 pursuant_hbp_dt[, hbp_bp_stage1 := bp_systolic >= 130 | bp_diastolic >= 80]
@@ -63,20 +61,6 @@ pseudo <- pursuant_hbp_dt[account_id_mask == ""] |>
   ungroup() |>
   data.table()
 
-# There is reason to believe frequent flyers are only those with account IDs.
-# Any other impact is minimal. 
-# Another opportunity for sensitivity analysis.
-
-# pseudo2 <- pursuant_hbp_dt[account_id_mask == ""] |>
-#   mutate(hbp_agg = hbp) |>
-#   select(account_id_mask, pseudo_member_id, 
-#          FIPS, county, state, year, year_range, 
-#          age, age_group, gender, ethnicity, urban, hbp_agg, hbp_bp, hbp_diagnosis)
-
-# pursuant_hbp <- acct |>
-#   rbind(pseudo) |>
-#   data.table()
-
 pursuant_hbp <- acct |>
   rbind(pseudo) |> 
   mutate(hbp_bp_stage1 = ( sbp >= 130 | dbp >= 80) ) |>
@@ -86,4 +70,15 @@ pursuant_hbp <- acct |>
   filter(state != "PR") |>
   data.table() 
 
-fwrite(pursuant_hbp, here("data/high_quality_dataset_meanBP_Sept24.csv"))
+# Merge with covariates (already standardised)
+cov <- fread(here("data", "reference", "model_covariates.csv"), 
+             colClasses = list(character = c("FIPS", "state_code")))
+
+dt_cov <- pursuant_hbp |>
+  # merge(cov[, .(FIPS, state_region, UE_rate, no_HS_rate, median_income, HI_coverage)], by = "FIPS", all.x = TRUE)
+  merge(cov[, .(FIPS, state_region, UE_rate, no_HS_rate, median_income, HI_coverage)], by = "FIPS")
+
+# Some problems with missing locations...should probably look into this!
+fwrite(dt_cov[!is.na(median_income)], here("data",
+                                           "processed",
+                                           "high_quality_dt_after_deduplication_w_cov_Sept24.csv"))

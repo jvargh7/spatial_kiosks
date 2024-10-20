@@ -7,45 +7,35 @@ if(interactive()){
   YEAR_RANGE <- "2017-2018"
   OUTCOME    <- "prevalence"
   STAGE      <- "stage2"
-  LEVEL     <- "national"
+  LEVEL      <- "national"
 } else{
-  args       <- commandArgs(trailingOnly = TRUE)
-  ID         <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
-  taskmap    <- fread(here("data", "taskmap_all_final_estimates.csv"))
-  YEAR <- taskmap[ID, YEARS]
-  OUTCOME    <- taskmap[ID, OUTCOMES]
-  STAGE      <- taskmap[ID, STAGES]
-  LEVEL      <- taskmap[ID, LEVEL]
-  # LEVEL    <- taskmap[ID, LEVEL]
+  args     <- commandArgs(trailingOnly = TRUE)
+  ID       <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+  taskmap  <- fread(here("data", "taskmap", "taskmap_final_estimates.csv"))
+  YEAR     <- taskmap[ID, YEARS]
+  OUTCOME  <- taskmap[ID, OUTCOMES]
+  STAGE    <- taskmap[ID, STAGES]
+  LEVEL    <- taskmap[ID, LEVEL]
 }
 
 # Map data ----------------------------------------------------------------
 model_name <- paste(YEAR, OUTCOME, STAGE, LEVEL, sep = "_")
 message("Processing ", model_name)
-      
-if(LEVEL == "county"){
-    # message("national")
-    national_estimate   <- poststratification(YR = YEAR, outcome = OUTCOME, stage = STAGE, group.vars = c("FIPS", "state"), compute.PI = TRUE)
-    fwrite(national_estimate, file = here("results", paste0(model_name, "_fixed-demo.csv")))
-} 
 
-if(LEVEL == "national"){
-    national_estimate   <- poststratification(YR = YEAR, outcome = OUTCOME, stage = STAGE, group.vars = c(), compute.PI = TRUE)
-    fwrite(national_estimate, file = here("results", paste0(model_name, "_fixed-demo.csv")))
-}
+# Define the grouping variable based on LEVEL.
+group.vars <- switch(LEVEL,
+                     "county" = c("FIPS", "state"),
+                     "national" = c(),
+                     "ethnicity-gender" = c("ethnicity", "gender"),
+                     "age-gender" = c("age_group", "gender"),
+                     LEVEL) # Default case if LEVEL does not match any of the specified conditions
 
-if(LEVEL == "ethnicity-gender"){
-    national_estimate   <- poststratification(YR = YEAR, outcome = OUTCOME, stage = STAGE, group.vars = c("ethnicity", "gender"), compute.PI = TRUE)
-    fwrite(national_estimate, file = here("results", paste0(model_name, "_fixed-demo.csv")))
-}
+estimate <- poststratification(YR = YEAR, 
+                               outcome = OUTCOME, 
+                               stage = STAGE, 
+                               group.vars = group.vars, 
+                               compute.PI = TRUE)
 
-if(LEVEL == "age-gender"){
-    national_estimate   <- poststratification(YR = YEAR, outcome = OUTCOME, stage = STAGE, group.vars = c("age_group", "gender"), compute.PI = TRUE)
-    fwrite(national_estimate, file = here("results", paste0(model_name, "_fixed-demo.csv")))
-}
+fwrite(estimate, file = here("results", "estimates", paste0(model_name, ".csv")))
 
-if( !(LEVEL %in% c("county", "national", "age-gender", "ethnicity-gender")) ){
-    national_estimate   <- poststratification(YR = YEAR, outcome = OUTCOME, stage = STAGE, group.vars = LEVEL, compute.PI = TRUE)
-    fwrite(national_estimate, file = here("results", paste0(model_name, "_fixed-demo.csv")))
-}
 message("DONE")

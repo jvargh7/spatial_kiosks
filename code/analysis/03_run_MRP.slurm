@@ -13,7 +13,7 @@
 # Load necessary modules or set any other environment variables if needed
 module load singularity
 # navigate to directory
-cd /projects/waller/spatial_kiosks/analyses
+cd /projects/waller/spatial_kiosks/code/analysis
 
 # Path to the Singularity image
 SINGULARITY_IMAGE=~/singularity-images/geospatial_4.4.1.sif

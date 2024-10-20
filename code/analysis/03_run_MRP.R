@@ -10,14 +10,14 @@ if(interactive()){
 } else{
   args       <- commandArgs(trailingOnly = TRUE)
   ID         <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
-  taskmap    <- fread(here("data", "taskmap_MRP.csv"))
+  taskmap    <- fread(here("data", "taskmap", "taskmap_MRP.csv"))
   YEAR_RANGE <- taskmap[ID, YR]
   IND        <- taskmap[ID, indicator]
   STAGE      <- taskmap[ID, stage]
   STATUS     <- taskmap[ID, status]
 }
 
-dt <- fread(here("data", "high_quality_dataset_meanBP_w_covariates_Sept24.csv"), 
+dt <- fread(here("data/processed/high_quality_dt_after_deduplication_w_cov_Sept24.csv"), 
             colClasses = list(character = "FIPS"))[year_range == YEAR_RANGE]
 
 # Filter based on indicator
@@ -69,5 +69,5 @@ fit.glmer <- glmer(
   control = glmerControl(optimizer = "nloptwrap")
 )
 
-filename <- paste0("glmer_", YEAR_RANGE, "_", STATUS, "_", STAGE, "_fixed-demo.rds")
-saveRDS(fit.glmer, file = here("outputs-Sept24", filename))
+filename <- paste0("glmer_", YEAR_RANGE, "_", STATUS, "_", STAGE, ".rds")
+saveRDS(fit.glmer, file = here("results", "models", filename))
