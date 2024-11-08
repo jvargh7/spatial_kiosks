@@ -5,10 +5,10 @@ library(here)
 
 # Main --------------------------------------------------------------------
 main <- function(){
-  nobs <- vector(mode = "list", length = 7)
+  nobs        <- vector(mode = "list", length = 7)
   names(nobs) <- c("Start", "Race", "Gender", "Age", "SBP", "DBP", "Deduplicate")
   
-  dt   <- open_dataset(here("data", "raw", "emory-limited-data-set-export-Sept24"),
+  dt <- open_dataset(here("data", "raw", "emory-limited-data-set-export-Sept24"),
                        format = "parquet") 
   nobs[[1]] <- nrow(dt)
   

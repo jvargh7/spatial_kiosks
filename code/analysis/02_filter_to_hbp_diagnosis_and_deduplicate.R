@@ -16,9 +16,8 @@ pursuant_hbp_dt <- pursuant |>
   data.table()
  
 fwrite(pursuant_hbp_dt, here("data/processed/high_quality_dt_before_deduplication_Sept24.csv") )
-
-# pursuant_hbp_dt <- fread(here("data/processed/high_quality_dt_before_deduplication_Sept24.csv"), 
-#                          colClasses = list(character = "FIPS") )
+arrow::write_dataset(pursuant_exclude_dt, 
+                     path = here("/projects/waller/spatial_kiosks/data/processed/excluded_obs_Sept24"), format = "parquet")
 
 # Compute hypertension indicators 
 pursuant_hbp_dt[, hbp_bp_stage1 := bp_systolic >= 130 | bp_diastolic >= 80]
