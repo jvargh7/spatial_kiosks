@@ -1,12 +1,13 @@
 library(data.table)
 library(here)
 library(lme4)
+library(splines)
 
 if(interactive()){
   YEAR_RANGE <- "2017-2018"
-  IND        <- "hbp"
+  IND        <- "hbp_bp"
   STAGE      <- "stage2"
-  STATUS     <- "prevalence"
+  STATUS     <- "uncontrolled"
 } else{
   args       <- commandArgs(trailingOnly = TRUE)
   ID         <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
@@ -22,23 +23,20 @@ dt <- fread(here("data/processed/high_quality_dt_after_deduplication_w_cov_Sept2
 
 # Filter based on indicator
 prev_var <- paste0("hbp_", STAGE)
+
+# P(D|H)
 if(IND == "hbp_diagnosis"){
-  # index       <- dt[, get(prev_var)]
-  # P(hypertension, aware)
   outcome_var <- "hbp_diagnosis"
+  dt <- dt[get(paste0("hbp_", STAGE))]
+# P(C|D, H)
 } else if(IND == "hbp_bp"){
-  # index <- dt[, get(prev_var) & hbp_diagnosis]
-  outcome_var <- paste0("hbp_bp_", STAGE)
-  # Redefine outcome variable to be P(hypertension, aware, uncontrolled) rather than P(uncontrolled | aware)
-  # We model the joint probability directly since it is more straightforward to perform post-stratification
-  dt[, (outcome_var) := get(outcome_var) & hbp_diagnosis]
+  outcome_var <- paste0("!hbp_bp_", STAGE)
+  # dt[, (outcome_var) := get(outcome_var) & hbp_diagnosis]
+  dt <- dt[ get(paste0("hbp_", STAGE)) & hbp_diagnosis]
+# P(H)
 } else{
-  # index <- 1:nrow(dt)
-  # P(hypertension)
   outcome_var <- prev_var
 }
-
-# dt <- dt[index]
 
 # Change to factors with reference levels ---------------------------------
 dt[, age_group := factor(age_group)]
@@ -50,21 +48,27 @@ dt[, state_region := factor(state_region, levels = c("Northeast", "South", "Nort
 # GLMER model fit -------------------------------------------------------------
 
 # Nested random intercept (FIPS inside state)
-# Random intercept for ethnicity, age group, and ethnicity:gender interaction
+# Random intercept:
+#   State
+#   County
 # Fixed effects: 
 #   gender
+#   ethnicity
+#   gender
+#   age group
+#   ethnicity:gender interaction
 #   urbanicity, unemployment rate, no HS degree rate, median household income, and region of state
 
 formula <- as.formula(paste0(outcome_var, " ~ ", 
                     # "(1|state/FIPS) + (1|ethnicity) + (1|age_group) + (1|ethnicity:gender) + 
                     "(1|state/FIPS) + age_group + ethnicity*gender + 
-                        urban + UE_rate + no_HS_rate + median_income + HI_coverage + state_region"))
+                        urban + ns(UE_rate, df = 4) + ns(no_HS_rate, df = 4) + ns(median_income, df = 4) + ns(HI_coverage, df = 4) + state_region"))
 
 fit.glmer <- glmer(
   formula,
   family = binomial(link = "logit"),
   data = dt,
-  nAGQ = 1L,
+  # nAGQ = 1L,
   verbose = 1,
   control = glmerControl(optimizer = "nloptwrap")
 )
