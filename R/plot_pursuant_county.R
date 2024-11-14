@@ -153,7 +153,9 @@ plot_pursuant_state_est <- function(outcome = "prevalence", stage = "stage2", br
   } else if(breaks == "regular"){
     # We want these to be the same as those we will use for counties
     custom_colors <- brewer.pal(5, "YlOrRd")
-    BREAKS <- c(30, seq(45, 60, 5), 66)
+    MIN <- min(dt$mean)-0.001
+    MAX <- max(dt$mean)
+    BREAKS <- seq(MIN, MAX, length.out = 6)
   }
   
   dt[, hbp_groups := cut(mean, breaks = BREAKS)]
@@ -172,7 +174,8 @@ plot_pursuant_state_est <- function(outcome = "prevalence", stage = "stage2", br
     theme_map + 
     facet_wrap(~year_range) + 
     # theme(legend.title = element_text("Prevalence (%)"))
-    labs(fill = "Prevalence (%)")
+    labs(fill = paste0(outcome, " (%)")) + 
+    ggtitle(tools::toTitleCase(paste0(stage, " ", outcome, " (", breaks, ")")) )
   return(plt)
 }
 
@@ -196,7 +199,9 @@ plot_pursuant_county_est <- function(outcome = "prevalence", stage = "stage2", b
   } else if(breaks == "regular"){
     # We want these to be the same as those we will use for counties
     custom_colors <- brewer.pal(5, "YlOrRd")
-    BREAKS <- c(30, seq(45, 60, 5), 66)
+    MIN <- min(dt$mean)-0.001
+    MAX <- max(dt$mean)
+    BREAKS <- seq(MIN, MAX, length.out = 6)
   }
   dt[, hbp_groups := cut(mean, breaks = BREAKS)]
   
@@ -219,6 +224,7 @@ plot_pursuant_county_est <- function(outcome = "prevalence", stage = "stage2", b
     theme_map + 
     facet_wrap(~year_range) + 
     # theme(legend.title = element_text("Prevalence (%)"))
-    labs(fill = "Prevalence (%)")
+    labs(fill = paste0(outcome, " (%)")) + 
+    ggtitle(tools::toTitleCase(paste0(stage, " ", outcome, " (", breaks, ")")) )
   return(plt)
 }

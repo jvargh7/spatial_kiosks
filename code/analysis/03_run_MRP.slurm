@@ -3,9 +3,9 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=1G
+#SBATCH --mem-per-cpu=500M
 #SBATCH --time=1:00:00
-#SBATCH --array=1-24
+#SBATCH --array=1-32
 #SBATCH --partition=chang,preemptable,short-cpu
 #SBATCH --output=/scratch/thsiao3/output/MRP_%A_%a.out
 #SBATCH --error=/scratch/thsiao3/error/MRP_%A_%a.err

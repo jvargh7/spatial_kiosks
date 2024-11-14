@@ -4,23 +4,25 @@ library(data.table)
 source(here("R", "compute_poststratification_estimates.R"))
 
 if(interactive()){
-  YEAR_RANGE <- "2017-2018"
-  OUTCOME    <- "prevalence"
-  STAGE      <- "stage2"
-  LEVEL      <- "national"
+  YEAR  <- "2019-2020"
+  STAGE <- "stage2"
+  LEVEL <- "state"
 } else{
   args     <- commandArgs(trailingOnly = TRUE)
   ID       <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
   taskmap  <- fread(here("data", "taskmap", "taskmap_final_estimates.csv"))
   YEAR     <- taskmap[ID, YEARS]
-  OUTCOME  <- taskmap[ID, OUTCOMES]
   STAGE    <- taskmap[ID, STAGES]
   LEVEL    <- taskmap[ID, LEVEL]
 }
 
 # Map data ----------------------------------------------------------------
-model_name <- paste(YEAR, OUTCOME, STAGE, LEVEL, sep = "_")
-message("Processing ", model_name)
+model_name.H  <- paste(YEAR, "prevalence", STAGE, LEVEL, sep = "_")
+model_name.Dm <- paste(YEAR, "awareness-marginal", STAGE, LEVEL, sep = "_")
+model_name.Dc <- paste(YEAR, "awareness-conditional", STAGE, LEVEL, sep = "_")
+model_name.C  <- paste(YEAR, "controlled", STAGE, LEVEL, sep = "_")
+
+message("Processing ", model_name.H)
 
 # Define the grouping variable based on LEVEL.
 group.vars <- switch(LEVEL,
@@ -31,11 +33,13 @@ group.vars <- switch(LEVEL,
                      LEVEL) # Default case if LEVEL does not match any of the specified conditions
 
 estimate <- poststratification(YR = YEAR, 
-                               outcome = OUTCOME, 
                                stage = STAGE, 
                                group.vars = group.vars, 
-                               compute.PI = TRUE)
+                               n.sims = 500)
 
-fwrite(estimate, file = here("results", "estimates", paste0(model_name, ".csv")))
+fwrite(estimate$prevalence, file = here("results", "estimates", paste0(model_name.H, ".csv")))
+fwrite(estimate$`awareness-marginal`, file = here("results", "estimates", paste0(model_name.Dm, ".csv")))
+fwrite(estimate$`awareness-conditional`, file = here("results", "estimates", paste0(model_name.Dc, ".csv")))
+fwrite(estimate$controlled, file = here("results", "estimates", paste0(model_name.C, ".csv")))
 
 message("DONE")

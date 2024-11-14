@@ -5,9 +5,10 @@ library(splines)
 
 if(interactive()){
   YEAR_RANGE <- "2017-2018"
-  IND        <- "hbp_bp"
+  IND        <- "hbp_diagnosis"
   STAGE      <- "stage2"
-  STATUS     <- "uncontrolled"
+  STATUS     <- "awareness"
+  DIST       <- "conditional"
 } else{
   args       <- commandArgs(trailingOnly = TRUE)
   ID         <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
@@ -16,6 +17,7 @@ if(interactive()){
   IND        <- taskmap[ID, indicator]
   STAGE      <- taskmap[ID, stage]
   STATUS     <- taskmap[ID, status]
+  DIST       <- taskmap[ID, distribution]
 }
 
 dt <- fread(here("data/processed/high_quality_dt_after_deduplication_w_cov_Sept24.csv"), 
@@ -24,15 +26,17 @@ dt <- fread(here("data/processed/high_quality_dt_after_deduplication_w_cov_Sept2
 # Filter based on indicator
 prev_var <- paste0("hbp_", STAGE)
 
-# P(D|H)
+# Awareness
 if(IND == "hbp_diagnosis"){
   outcome_var <- "hbp_diagnosis"
-  dt <- dt[get(paste0("hbp_", STAGE))]
-# P(C|D, H)
+  if(DIST == "conditional"){
+    dt          <- dt[get(paste0("hbp_", STAGE))]
+  }
+# Controlled among the aware
 } else if(IND == "hbp_bp"){
   outcome_var <- paste0("!hbp_bp_", STAGE)
   # dt[, (outcome_var) := get(outcome_var) & hbp_diagnosis]
-  dt <- dt[ get(paste0("hbp_", STAGE)) & hbp_diagnosis]
+  dt          <- dt[ get(paste0("hbp_", STAGE)) & hbp_diagnosis]
 # P(H)
 } else{
   outcome_var <- prev_var
@@ -59,10 +63,22 @@ dt[, state_region := factor(state_region, levels = c("Northeast", "South", "Nort
 #   ethnicity:gender interaction
 #   urbanicity, unemployment rate, no HS degree rate, median household income, and region of state
 
+# formula <- as.formula(paste0(outcome_var, " ~ ", 
+#                     # "(1|state/FIPS) + (1|ethnicity) + (1|age_group) + (1|ethnicity:gender) + 
+#                     "(1|state/FIPS) + age_group + ethnicity*gender + urban + 
+#                     ns(UE_rate, df = 4) + 
+#                     ns(no_HS_rate, df = 4) + 
+#                     ns(median_income, df = 4) + 
+#                     ns(HI_coverage, df = 4) + 
+#                     state_region"))
 formula <- as.formula(paste0(outcome_var, " ~ ", 
                     # "(1|state/FIPS) + (1|ethnicity) + (1|age_group) + (1|ethnicity:gender) + 
-                    "(1|state/FIPS) + age_group + ethnicity*gender + 
-                        urban + ns(UE_rate, df = 4) + ns(no_HS_rate, df = 4) + ns(median_income, df = 4) + ns(HI_coverage, df = 4) + state_region"))
+                    "(1|state/FIPS) + age_group + ethnicity*gender + urban + 
+                    UE_rate + 
+                    no_HS_rate + 
+                    median_income + 
+                    HI_coverage + 
+                    state_region"))
 
 fit.glmer <- glmer(
   formula,
@@ -73,5 +89,5 @@ fit.glmer <- glmer(
   control = glmerControl(optimizer = "nloptwrap")
 )
 
-filename <- paste0("glmer_", YEAR_RANGE, "_", STATUS, "_", STAGE, ".rds")
+filename <- paste0("glmer_", YEAR_RANGE, "_", STATUS, "_", DIST, "_", STAGE, ".rds")
 saveRDS(fit.glmer, file = here("results", "models", filename))

@@ -2,16 +2,18 @@ library(arrow)
 library(data.table)
 library(dplyr)
 library(here)
+library(srvyr)
 library(vroom)
 
 # Age weights from national ACS 2018-2022
 source(here("WEIGHTS.R"))
 
-#' Generates the Table 1 for NHANES data
-generate_nhanes_Table1 <- function(year_range = "2017Mar2020"){
-  file <- paste0("nhanes_", year_range, ".rds")
-  filepath <- here("data", "processed", "nhanes", file)
-  dt <- readRDS( filepath ) |>
+# Completely unweighted
+# Age standardize
+# Weighted w/ survey weights
+# Weighted w/ survey weights + age_standardization
+transform_nhanes <- function(dt){
+  dt <-  dt |>
     filter(age >= 18) |>
     mutate(ethnicity = case_when(
       race == 1 ~ "Hispanic",
@@ -47,28 +49,114 @@ generate_nhanes_Table1 <- function(year_range = "2017Mar2020"){
         toldhighbp == 1 ~ TRUE,  
         is.na(SBP) & is.na(DBP) ~ NA,  
         TRUE ~ FALSE
-    )) |>
+      )) |>
     mutate(
       stage2_hypertension = case_when(
         (SBP >= 140 ) | (DBP >= 90 ) ~ TRUE,
         toldhighbp == 1 ~ TRUE,  
         is.na(SBP) & is.na(DBP) ~ NA,  
         TRUE ~ FALSE
-    )) |> left_join(AGE_WEIGHTS, by = "age_group") |>
-    
-    data.table()
-  diagnosed_htn_uw <- dt[, mean(toldhighbp == 1, na.rm = TRUE)]*100
-  diagnosed_htn    <- dt[, weighted.mean(toldhighbp == 1, age_weight, na.rm = TRUE)]*100
-  stage1_htn_uw    <- dt[, mean(stage1_hypertension, na.rm=TRUE)]*100
-  stage1_htn       <- dt[, weighted.mean(stage1_hypertension, age_weight, na.rm=TRUE)]*100
-  stage2_htn_uw    <- dt[, mean(stage2_hypertension, na.rm=TRUE)]*100
-  stage2_htn       <- dt[, weighted.mean(stage2_hypertension, age_weight, na.rm=TRUE)]*100
-  # sbp           <- dt[, weighted.mean(SBP, age_weight, na.rm=TRUE)]
-  # dbp           <- dt[, weighted.mean(DBP, age_weight, na.rm=TRUE)]
-  sbp           <- dt[, mean(SBP, na.rm=TRUE)]
-  dbp           <- dt[, mean(DBP, na.rm=TRUE)]
-  sbp_sd <- dt[, sd(SBP, na.rm=TRUE)]
-  dbp_sd <- dt[, sd(DBP, na.rm=TRUE)]
+      ))
+  return(dt)
+}
+
+#' Generates the Table 1 for NHANES data
+generate_nhanes_Table1 <- function(year_range = "2017Mar2020"){
+  file     <- paste0("nhanes_", year_range, ".rds")
+  filepath <- here("data", "processed", "nhanes", file)
+  dt       <- readRDS( filepath ) |>
+                transform_nhanes() |>
+                left_join(AGE_WEIGHTS, by = "age_group") |>
+                data.table()
+  
+  svyobj <- as_survey_design(.data=dt,
+                             ids=psu,
+                             strata = pseudostratum,
+                             weights = mec2yweight,
+                             nest = TRUE,
+                             pps = "brewer",variance = "YG")
+  
+  nhanes_survey <- svyobj |>
+      mutate(
+        diagnosed = if_else(toldhighbp == 1, 1, 0),
+        stage1_awareness= if_else(stage1_hypertension == 1 & diagnosed == 1, 1, 0),
+        stage1_control= if_else(stage1_awareness == 1 & SBP < 130 & DBP < 80, 1, 0),
+        stage2_awareness = if_else(stage2_hypertension == 1 & diagnosed == 1, 1, 0),
+        stage2_control = if_else(stage2_awareness == 1 & SBP < 140 & DBP < 90, 1, 0)
+      ) |>
+    # group_by(age_group, age_weight) |>
+      summarize(
+                stage1_prevalence_uw = mean(stage1_hypertension, na.rm=TRUE),
+                stage1_diagnosed_uw = mean(stage1_awareness, na.rm=TRUE),
+                stage1_awareness_uw = mean(stage1_awareness / stage1_hypertension , na.rm=TRUE),
+                stage1_controlled_uw = mean(stage1_control / stage1_awareness, na.rm = TRUE), 
+                stage1_prevalence_w = survey_mean(stage1_hypertension, na.rm=TRUE),
+                stage1_diagnosed_w = survey_mean(stage1_awareness, na.rm=TRUE),
+                stage1_awareness_w = survey_mean(stage1_awareness / stage1_hypertension , na.rm=TRUE),
+                stage1_controlled_w = survey_mean(stage1_control / stage1_awareness, na.rm = TRUE),
+                stage2_prevalence_uw = mean(stage2_hypertension, na.rm=TRUE),
+                stage2_diagnosed_uw = mean(stage2_awareness, na.rm=TRUE),
+                stage2_awareness_uw = mean(stage2_awareness / stage2_hypertension , na.rm=TRUE),
+                stage2_controlled_uw = mean(stage2_control / stage2_awareness, na.rm = TRUE), 
+                stage2_prevalence_w = survey_mean(stage2_hypertension, na.rm=TRUE),
+                stage2_diagnosed_w = survey_mean(stage2_awareness, na.rm=TRUE),
+                stage2_awareness_w = survey_mean(stage2_awareness / stage2_hypertension , na.rm=TRUE),
+                stage2_controlled_w = survey_mean(stage2_control / stage2_awareness, na.rm = TRUE)
+      ) 
+  
+  final_table <- nhanes_survey %>%
+    tidyr::pivot_longer(cols = names(.)) %>%
+    tidyr::separate(
+      name, 
+      into = c("stage", "outcome", "weighted", "type"),
+      sep = "_"
+    ) |>
+    tidyr::pivot_wider(id_cols = c("stage", "outcome", "weighted"), 
+                       names_from = "type", 
+                       values_from = "value") |>
+    dplyr::rename(value = `NA`) |>
+    mutate(lower = value - 1.96*se, 
+           upper = value + 1.96*se) |>
+    dplyr::arrange(weighted, stage,outcome)
+  
+  # diagnosed_htn_uw <- dt[, mean(toldhighbp == 1, na.rm = true)]*100
+  # diagnosed_htn    <- dt[, weighted.mean(toldhighbp == 1, age_weight, na.rm = true)]*100
+  # stage1_htn_uw    <- dt[, mean(stage1_hypertension, na.rm=true)]*100
+  # stage1_htn       <- dt[, weighted.mean(stage1_hypertension, age_weight, na.rm=true)]*100
+  # stage2_htn_uw    <- dt[, mean(stage2_hypertension, na.rm=true)]*100
+  # stage2_htn       <- dt[, weighted.mean(stage2_hypertension, age_weight, na.rm=true)]*100
+  # sbp           <- dt[, weighted.mean(sbp, age_weight, na.rm=true)]
+  # dbp           <- dt[, weighted.mean(dbp, age_weight, na.rm=true)]
+  
+  bp_table <- svyobj |>
+    summarize(
+              SBP_w_mean = survey_mean(SBP, na.rm=TRUE),
+              SBP_w_sd = survey_var(SBP, na.rm=TRUE) |> sqrt(),
+              SBP_uw_mean = mean(SBP, na.rm=TRUE),
+              SBP_uw_sd = sd(SBP, na.rm=TRUE),
+              DBP_w_mean = survey_mean(DBP, na.rm=TRUE),
+              DBP_w_sd = survey_var(DBP, na.rm=TRUE) |> sqrt(),
+              DBP_uw_mean = mean(DBP, na.rm=TRUE),
+              DBP_uw_sd = sd(DBP, na.rm=TRUE),
+    ) %>%
+    tidyr::pivot_longer(cols = names(.)) %>%
+    filter(!grepl("se", name)) |>
+    tidyr::separate(
+      name, 
+      into = c("type", "weighted", "data"),
+      sep = "_"
+    ) |>
+    tidyr::pivot_wider(id_cols = c("type", "weighted"), 
+                       names_from = "data", 
+                       values_from = "value") |>
+    # mutate(lower = mean - 1.96*sd, 
+    #        upper = mean + 1.96*sd) |>
+    dplyr::arrange(type, weighted)
+  
+  # sbp           <- dt[, mean(sbp, na.rm=true)]
+  # dbp           <- dt[, mean(dbp, na.rm=true)]
+  # sbp_sd <- dt[, sd(sbp, na.rm=true)]
+  # dbp_sd <- dt[, sd(dbp, na.rm=true)]
   
   age_table <- dt |>
     count(age_group) |>
@@ -83,24 +171,30 @@ generate_nhanes_Table1 <- function(year_range = "2017Mar2020"){
     mutate(percent = n / sum(n)*100)
   race_table <- race_table[c(1,5,3,2,4)]
   
-  list(age_table, 
-       gender_table, 
-       race_table, 
-       paste0("SBP: ", sbp, " (", sbp_sd, ")"), 
-       paste0("DBP: ", dbp, " (", dbp_sd, ")"),
-       paste0("Diagnosed HTN (unweighted): ", diagnosed_htn_uw),
-       paste0("Diagnosed HTN: ", diagnosed_htn),
-       paste0("Stage 1 (unweighted): ", stage1_htn_uw),
-       paste0("Stage 1: ", stage1_htn),
-       paste0("Stage 2 (unweighted): ", stage2_htn_uw),
-       paste0("Stage 2: ", stage2_htn))
+  list(
+    paste0("Total obs: ", nrow(dt)),
+             age_table, 
+             gender_table, 
+             race_table, 
+             # paste0("sbp: ", sbp, " (", sbp_sd, ")"), 
+             # paste0("dbp: ", dbp, " (", dbp_sd, ")"),
+             # paste0("diagnosed htn (unweighted): ", diagnosed_htn_uw),
+             # paste0("diagnosed htn: ", diagnosed_htn),
+             # paste0("stage 1 (unweighted): ", stage1_htn_uw),
+             # paste0("stage 1: ", stage1_htn),
+             # paste0("stage 2 (unweighted): ", stage2_htn_uw),
+             # paste0("stage 2: ", stage2_htn))
+             final_table,
+             bp_table
+  )
 }
 
-#' Generates the Table 1 for Pursuant data based on year ranges
+#' generates the table 1 for pursuant data based on year ranges
 generate_pursuant_Table1 <- function(year_start=2017, year_end=2020){
+  ps       <- fread(here("data/reference/poststratification_table.csv"))[, .(weight = sum(n)), .(age_group, gender, ethnicity)]
   pursuant <- fread(here("data/processed/high_quality_dt_after_deduplication_w_cov_Sept24.csv")) |>
     filter(year <= year_end & year >= year_start) |>
-    left_join(AGE_WEIGHTS, by = "age_group")
+    left_join(ps, by = c("age_group", "gender", "ethnicity"))
  
   age_table <- pursuant |>
     count(age_group) |>
@@ -122,14 +216,15 @@ generate_pursuant_Table1 <- function(year_start=2017, year_end=2020){
     mutate(urban = ifelse(urban == 1, "urban", "rural"))
   
   diagnosed_htn_uw <- pursuant[, mean(hbp_diagnosis == TRUE, na.rm = TRUE)]*100
-  diagnosed_htn    <- pursuant[, weighted.mean(hbp_diagnosis == 1, age_weight, na.rm = TRUE)]*100
+  diagnosed_htn    <- pursuant[, weighted.mean(hbp_diagnosis == 1, weight, na.rm = TRUE)]*100
   stage1_htn_uw    <- pursuant[, mean(hbp_stage1, na.rm = TRUE)]*100
-  stage1_htn       <- pursuant[, weighted.mean(hbp_stage1, age_weight, na.rm=TRUE)]*100
+  stage1_htn       <- pursuant[, weighted.mean(hbp_stage1, weight, na.rm=TRUE)]*100
   stage2_htn_uw    <- pursuant[, mean(hbp_stage2, na.rm=TRUE)]*100
-  stage2_htn       <- pursuant[, weighted.mean(hbp_stage2, age_weight, na.rm=TRUE)]*100
-  # sbp           <- dt[, weighted.mean(SBP, age_weight, na.rm=TRUE)]
-  # dbp           <- dt[, weighted.mean(DBP, age_weight, na.rm=TRUE)]
+  stage2_htn       <- pursuant[, weighted.mean(hbp_stage2, weight, na.rm=TRUE)]*100
+  # sbp           <- dt[, weighted.mean(sbp, age_weight, na.rm=true)]
+  # dbp           <- dt[, weighted.mean(dbp, age_weight, na.rm=true)]
   sbp           <- pursuant[, mean(sbp, na.rm=TRUE)]
+  # sbp           <- pursuant[, weighted.mean(sbp, weight, na.rm=TRUE)]
   dbp           <- pursuant[, mean(dbp, na.rm=TRUE)]
   sbp_sd <- pursuant[, sd(sbp, na.rm=TRUE)]
   dbp_sd <- pursuant[, sd(dbp, na.rm=TRUE)]
@@ -138,17 +233,17 @@ generate_pursuant_Table1 <- function(year_start=2017, year_end=2020){
        gender_table, 
        race_table, 
        urban_table,
-       paste0("SBP: ", sbp, " (", sbp_sd, ")"), 
-       paste0("DBP: ", dbp, " (", dbp_sd, ")"),
-       paste0("Diagnosed HTN (unweighted): ", diagnosed_htn_uw),
-       paste0("Diagnosed HTN: ", diagnosed_htn),
-       paste0("Stage 1 (unweighted): ", stage1_htn_uw),
-       paste0("Stage 1: ", stage1_htn),
-       paste0("Stage 2 (unweighted): ", stage2_htn_uw),
-       paste0("Stage 2: ", stage2_htn))
+       paste0("sbp: ", sbp, " (", sbp_sd, ")"), 
+       paste0("dbp: ", dbp, " (", dbp_sd, ")"),
+       paste0("diagnosed htn (unweighted): ", diagnosed_htn_uw),
+       paste0("diagnosed htn: ", diagnosed_htn),
+       paste0("stage 1 (unweighted): ", stage1_htn_uw),
+       paste0("stage 1: ", stage1_htn),
+       paste0("stage 2 (unweighted): ", stage2_htn_uw),
+       paste0("stage 2: ", stage2_htn))
 }
 
-# Generates the Table 1 for BRFSS data for the 2017/2019/2021/2023 surveys
+# generates the table 1 for brfss data for the 2017/2019/2021/2023 surveys
 generate_brfss_Table1 <- function(year = 2021){
   layout_filename <- paste0("data/raw/brfss/variable_layouts/", year, ".csv")
   columns <- fread(here(layout_filename))
@@ -168,12 +263,12 @@ generate_brfss_Table1 <- function(year = 2021){
   
   if(year == 2017){
     brfss_data <- brfss_data |>
-      select("_STATE", "_AGEG5YR", "SEX", "_RACE", "_RFHYPE5") |>
+      select("_STATE", "_AGEG5YR", "SEX", "_RACE", "_RFHYPE5", "_PSU", "_STSTR", "_LLCPWT") |>
       rename(`_RFHYPE6` = `_RFHYPE5`,
              `_SEX` = SEX)
   } else if(year == 2019){
     brfss_data <- brfss_data |>
-      select("_STATE", "_AGEG5YR", "_SEX", "_RACE", "_URBSTAT", "_RFHYPE5") |>
+      select("_STATE", "_AGEG5YR", "_SEX", "_RACE", "_URBSTAT", "_RFHYPE5", "_PSU", "_STSTR", "_LLCPWT") |>
       rename(`_RFHYPE6` = `_RFHYPE5`) |>
       mutate(urban = case_when(
         `_URBSTAT` == 1 ~ "urban",
@@ -182,7 +277,7 @@ generate_brfss_Table1 <- function(year = 2021){
     # filter(!is.na(urban)) 
   } else if(year == 2021 | year == 2023){
     brfss_data <- brfss_data |>
-      select("_STATE", "_AGEG5YR", "_SEX", "_RACE", "_URBSTAT", "_RFHYPE6") |>
+      select("_STATE", "_AGEG5YR", "_SEX", "_RACE", "_URBSTAT", "_RFHYPE6", "_PSU", "_STSTR", "_LLCPWT") |>
       mutate(urban = case_when(
         `_URBSTAT` == 1 ~ "urban",
         `_URBSTAT` == 2 ~ "rural"
@@ -213,9 +308,12 @@ generate_brfss_Table1 <- function(year = 2021){
     )) |>
     data.table() |>
     filter(!is.na(hbp)) |>
+    rename(PSU=`_PSU`, 
+           STSTR=`_STSTR`,
+           LLCPWT=`_LLCPWT`) |>
     filter(!is.na(`_SEX`)) |>
-    filter(age_group != "Missing") |>
-    left_join(AGE_WEIGHTS_SHORT, by = "age_group")
+    filter(age_group != "Missing") #|>
+    # left_join(AGE_WEIGHTS_SHORT, by = "age_group")
   
   age_table <- brfss_data |>
     count(age_group) |>
@@ -241,9 +339,20 @@ generate_brfss_Table1 <- function(year = 2021){
   }
 
   # Diagnosed hypertension - asked in BRFSS ---------------------------------
+  options(survey.lonely.psu = "adjust")
+  svyobj <- brfss_data %>%
+    as_survey_design(.data = .,
+                     ids = PSU,
+                     strata = STSTR,
+                     weights = LLCPWT, 
+                     nest = TRUE, 
+                     ps = "brewer",variance = "YG")
+  
+  diagnosed_htn_weighted <- svyobj |>
+    summarize(diagnosed = survey_mean(hbp, na.rm=TRUE))
   
   diagnosed_htn_uw       <- brfss_data[, mean(hbp == TRUE)]*100
-  diagnosed_htn_weighted <- brfss_data[, weighted.mean(hbp == TRUE, age_weight)]*100
+  # diagnosed_htn_weighted <- brfss_data[, weighted.mean(hbp == TRUE, age_weight)]*100
   
   list(paste0("Total obs: ", nrow(brfss_data)),
        age_table, 

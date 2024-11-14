@@ -1,5 +1,6 @@
 library(DiagrammeR)
 library(DiagrammeRsvg)
+library(here)
 library(rsvg)
 
 diag <- grViz("
@@ -27,3 +28,5 @@ digraph PRISMA {
 }
 ")
 
+svg_code <- export_svg(diag)
+rsvg_png(charToRaw(svg_code), file = here("results/figures/PRISM.png"))
