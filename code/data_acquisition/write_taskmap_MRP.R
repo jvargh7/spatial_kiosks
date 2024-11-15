@@ -7,7 +7,8 @@ library(here)
 # 2)  HBP awareness given prevalence 
 # 3)  HBP control given awareness and prevalence
 
-taskmap <- CJ(YR = c("2017-2018", "2019-2020", "2021-2022", "2023-2024"),
+taskmap <- CJ(YR = c("2017-2018", "2019-2020", "2021-2022", "2023-2024",
+                     "2017-2020", "2021-2024"),
               indicator = c("hbp", "hbp_diagnosis", "hbp_bp"),
               stage = c("stage1", "stage2"))
 
@@ -16,6 +17,7 @@ taskmap[, status := ifelse(indicator == "hbp", "prevalence",
 
 taskmap[, distribution := ifelse(status %in% c("awareness", "controlled"), "conditional", "marginal")]
 
+# Replicate table for the marginal awareness model (to compare to BRFSS)
 other <- taskmap[status == "awareness"]
 other[, distribution := "marginal"]
 
