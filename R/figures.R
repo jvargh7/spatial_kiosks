@@ -97,9 +97,10 @@ plot_pursuant_nobs      <- function(){
   return(fig_pursuant_nobs)
 }
 
-plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", level = "state", breaks = "quantile", range = "four"){
+plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", level = "state", breaks = "quantile", range = "four", min = 20, mid = 50, max = 85){
   
   pallette <- ifelse(outcome %in% c("prevalence", "awareness-marginal"), "YlOrRd", "Blues")
+  high_col <- ifelse(outcome %in% c("prevalence", "awareness-marginal"), "red", "green")
   
   # Year range
   if(range == "four"){
@@ -129,7 +130,7 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
   # Adjust the weird ones where didn't become percentage
   dt[, mean := ifelse(mean < 1, mean*100, mean)]
   
-  # Breaks
+  # Breaks: quantiles, regular intervals, or continuous from 0 to 100. Lastly, custom breaks
   if(breaks == "quantile"){
     custom_colors <- brewer.pal(5, pallette)
     QUANTILES <- quantile(dt$mean, seq(0, 1, .2))
@@ -141,15 +142,11 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
     MIN <- min(dt$mean)-0.001
     MAX <- max(dt$mean)
     BREAKS <- seq(MIN, MAX, length.out = 6)
+  } else if(breaks == "continuous"){
+    
+  } else{
+    
   }
-  
-  # if(stage == "stage2" & outcome == "prevalence"){
-  #   BREAKS <- c(44, seq(50, 58, length.out = 5))
-  # }
-  # Breaks for paper figures
-  # if(stage == "stage2" & outcome == "prevalence"){
-  #   BREAKS <- c(33, seq(42, 66, length.out = 5))
-  # }
   
   if(level == "state"){
     merge_vars <- c("STUSPS" = "state", "year_range")
@@ -171,18 +168,28 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
     state_boundaries <- readRDS(here("data", "reference", "state_boundaries_2022.rds"))
   }
   
+  # Actual plot code
+  # plt <- ggplot() +
+  #     geom_sf(data=boundaries,col=boundary_col,aes(fill=hbp_groups))  +
+  #     scale_fill_manual(values = custom_colors) + 
+  #     theme_map + 
+  #     facet_wrap(~year_range) + 
+  #     labs(fill = paste0("Proportion (%)")) + 
+  #     ggtitle(tools::toTitleCase(paste0(stage, " ", outcome, " (", breaks, ")")) )
   plt <- ggplot() +
-      geom_sf(data=boundaries,col=boundary_col,aes(fill=hbp_groups))  +
-      scale_fill_manual(values = custom_colors) + 
+      geom_sf(data=boundaries,col=boundary_col,aes(fill=mean))  +
+      scale_fill_gradient2(low = scales::muted("blue"), high = scales::muted(high_col), mid = "white", 
+                           midpoint = mid, limits = c(min, max)) + 
       theme_map + 
-      facet_wrap(~year_range) + 
-      labs(fill = paste0("Proportion (%)")) + 
-      ggtitle(tools::toTitleCase(paste0(stage, " ", outcome, " (", breaks, ")")) )
+      facet_wrap(~year_range, nrow = 1) + 
+      labs(fill = paste0("Proportion (%)")) #+ 
+      # ggtitle(tools::toTitleCase(paste0(stage, " ", outcome, " (", breaks, ")")) )
   
   if(level == "county"){
     plt <- plt + geom_sf(data=state_boundaries,col="black",fill=NA)
   }
  
+  # Unify the EPSG
   plt <- plt + coord_sf(crs = 5070, datum = NA)
    
   return(plt)
@@ -224,8 +231,8 @@ plot_brfss2021_scatter <- function(){
   return(plt)
 }
 
-plot_pursuant_unadjust_vs_adjust_state <- function(stage = "stage2", outcome = "awareness-conditional", year_range = "2021-2022"){
-  model_name <- paste(year_range, outcome, stage, sep = "_")
+plot_pursuant_unadjust_vs_adjust_state <- function(stage = "stage2", outcome = "awareness-conditional", year_range_arg = "2021-2022"){
+  model_name <- paste(year_range_arg, outcome, stage, sep = "_")
   
   # Model-based estimates
   model_est <- here("results", "estimates", paste0(model_name, "_state.csv")  ) |>
@@ -249,7 +256,7 @@ plot_pursuant_unadjust_vs_adjust_state <- function(stage = "stage2", outcome = "
                     "prevalence" = paste0("hbp_", stage),
                     "awareness-marginal" = paste0("hbp_diagnosis"),
                     "awareness-conditional" = paste0("hbp_diagnosis"),
-                    "controlled" = paste0("hbp_bp_", stage, "& hbp_diagnosis & hbp_", stage),
+                    "controlled" = paste0("!hbp_bp_", stage),
                     NA) 
   
   # Denominator variable
@@ -261,7 +268,7 @@ plot_pursuant_unadjust_vs_adjust_state <- function(stage = "stage2", outcome = "
   # Raw estimates
   data_est <- here("data/processed/high_quality_dt_after_deduplication_w_cov_Sept24.csv") |> 
                   fread(colClasses = list(character = "FIPS")) |>
-                  filter(.data$year_range == year_range & !!rlang::parse_expr(denom_var)) |>
+                  filter(.data$year_range == year_range_arg & !!rlang::parse_expr(denom_var)) |>
                   group_by(state) |>
                   summarise(mean = mean(!!rlang::parse_expr(num_var)), n = n()) |>
                   ungroup() |>
@@ -283,7 +290,6 @@ plot_pursuant_unadjust_vs_adjust_state <- function(stage = "stage2", outcome = "
     mutate(mean = p*100, lower = lower*100, upper = upper*100) |>
     dplyr::select(mean, lower, upper, type) |>
     rbind(national_est[, .(mean, lower, upper, type)])
-  
   
   dt <- rbind(model_est, data_est, fill= TRUE)
   state_order <- dt[type == "Model-adjusted"][order(mean), state]
@@ -313,12 +319,13 @@ plot_pursuant_unadjust_vs_adjust_state <- function(stage = "stage2", outcome = "
                                       fill = type,
                                       group = type), alpha = 0.2) +
     theme(text = element_text(size = 10)) + 
-    ggtitle(model_name)
+    ggtitle(model_name) +
+    scale_y_continuous(expand = c(0, 0), limits = c(0, 100))
   
   return(plt)
 } 
 
-plot_barplot_ethnicity_gender <- function(stage = "stage2", outcome = "prevalence", year_range = "2021-2022", demo_var = "ethnicity", include_title = TRUE){
+plot_barplot_by_gender <- function(stage = "stage2", outcome = "prevalence", year_range = "2021-2022", demo_var = "ethnicity", include_title = TRUE){
   if(year_range == "All"){
     year_range <- c("2017-2018", "2019-2020", "2021-2022", "2023-2024")
   }
