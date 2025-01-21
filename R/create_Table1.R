@@ -215,12 +215,54 @@ generate_pursuant_Table1 <- function(year_start=2017, year_end=2020){
     mutate(percent = n / sum(n) *100) |>
     mutate(urban = ifelse(urban == 1, "urban", "rural"))
   
-  diagnosed_htn_uw <- pursuant[, mean(hbp_diagnosis == TRUE, na.rm = TRUE)]*100
-  diagnosed_htn    <- pursuant[, weighted.mean(hbp_diagnosis == 1, weight, na.rm = TRUE)]*100
-  stage1_htn_uw    <- pursuant[, mean(hbp_stage1, na.rm = TRUE)]*100
-  stage1_htn       <- pursuant[, weighted.mean(hbp_stage1, weight, na.rm=TRUE)]*100
-  stage2_htn_uw    <- pursuant[, mean(hbp_stage2, na.rm=TRUE)]*100
-  stage2_htn       <- pursuant[, weighted.mean(hbp_stage2, weight, na.rm=TRUE)]*100
+  svyobj <- as_survey_design(.data=pursuant,
+                             #ids=psu,
+                             #strata = pseudostratum,
+                             weights = weight,
+                             nest = TRUE,
+                             pps = "brewer",variance = "YG")
+  nhanes_survey <- svyobj |>
+      mutate(
+        diagnosed = if_else(hbp_diagnosis == 1, 1, 0),
+        stage1_awareness= if_else(hbp_stage1 == 1 & diagnosed == 1, 1, 0),
+        stage1_control= if_else(stage1_awareness == 1 & !hbp_bp_stage1, 1, 0),
+        stage2_awareness = if_else(hbp_stage2 == 1 & diagnosed == 1, 1, 0),
+        stage2_control = if_else(stage2_awareness == 1 & !hbp_bp_stage2, 1, 0)
+      ) |>
+    # group_by(age_group, age_weight) |>
+      summarize(
+                stage1_prevalence_uw = mean(hbp_stage1, na.rm=TRUE),
+                stage1_diagnosed_uw = mean(stage1_awareness, na.rm=TRUE),
+                stage1_awareness_uw = mean(stage1_awareness / hbp_stage1 , na.rm=TRUE),
+                stage1_controlled_uw = mean(stage1_control / stage1_awareness, na.rm = TRUE), 
+                stage1_prevalence_w = survey_mean(hbp_stage1, na.rm=TRUE),
+                stage1_diagnosed_w = survey_mean(stage1_awareness, na.rm=TRUE),
+                stage1_awareness_w = survey_mean(stage1_awareness / hbp_stage1 , na.rm=TRUE),
+                stage1_controlled_w = survey_mean(stage1_control / stage1_awareness, na.rm = TRUE),
+                stage2_prevalence_uw = mean(hbp_stage1, na.rm=TRUE),
+                stage2_diagnosed_uw = mean(stage2_awareness, na.rm=TRUE),
+                stage2_awareness_uw = mean(stage2_awareness / hbp_stage2, na.rm=TRUE),
+                stage2_controlled_uw = mean(stage2_control / stage2_awareness, na.rm = TRUE), 
+                stage2_prevalence_w = survey_mean(hbp_stage2, na.rm=TRUE),
+                stage2_diagnosed_w = survey_mean(stage2_awareness, na.rm=TRUE),
+                stage2_awareness_w = survey_mean(stage2_awareness / hbp_stage2 , na.rm=TRUE),
+                stage2_controlled_w = survey_mean(stage2_control / stage2_awareness, na.rm = TRUE)
+      ) 
+  final_table <- nhanes_survey %>%
+    tidyr::pivot_longer(cols = names(.)) %>%
+    tidyr::separate(
+      name, 
+      into = c("stage", "outcome", "weighted", "type"),
+      sep = "_"
+    ) |>
+    tidyr::pivot_wider(id_cols = c("stage", "outcome", "weighted"), 
+                       names_from = "type", 
+                       values_from = "value") |>
+    dplyr::rename(value = `NA`) |>
+    mutate(lower = value - 1.96*se, 
+           upper = value + 1.96*se) |>
+    dplyr::arrange(weighted, stage,outcome)
+  
   # sbp           <- dt[, weighted.mean(sbp, age_weight, na.rm=true)]
   # dbp           <- dt[, weighted.mean(dbp, age_weight, na.rm=true)]
   sbp           <- pursuant[, mean(sbp, na.rm=TRUE)]
@@ -235,12 +277,8 @@ generate_pursuant_Table1 <- function(year_start=2017, year_end=2020){
        urban_table,
        paste0("sbp: ", sbp, " (", sbp_sd, ")"), 
        paste0("dbp: ", dbp, " (", dbp_sd, ")"),
-       paste0("diagnosed htn (unweighted): ", diagnosed_htn_uw),
-       paste0("diagnosed htn: ", diagnosed_htn),
-       paste0("stage 1 (unweighted): ", stage1_htn_uw),
-       paste0("stage 1: ", stage1_htn),
-       paste0("stage 2 (unweighted): ", stage2_htn_uw),
-       paste0("stage 2: ", stage2_htn))
+       final_table
+     )
 }
 
 # generates the table 1 for brfss data for the 2017/2019/2021/2023 surveys

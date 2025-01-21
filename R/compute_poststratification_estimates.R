@@ -166,8 +166,8 @@ poststratification <- function(YR = "2017-2018",
     as.matrix()
   
   # Transform back to [D|H] and [C|D,H] conditional probabilities
-  dt_matrix.Dc <- dt_matrix.DcH / dt_matrix.H
-  dt_matrix.C <- dt_matrix.CDcH / dt_matrix.DcH
+  dt_matrix.Dc <- dt_matrix.DcH / dt_matrix.H 
+  dt_matrix.C <- dt_matrix.CDcH / dt_matrix.DcH 
   
   # Calculate mean, lower, and upper for the Post stratified [H], [D|H], and [C|D,H]
   dt_weighted_means.H[, `:=`(mean = rowMeans(dt_matrix.H),
