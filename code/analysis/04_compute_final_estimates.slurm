@@ -6,7 +6,7 @@
 #SBATCH --mem-per-cpu=10G
 #SBATCH --time=72:00:00
 #SBATCH --partition=chang,preemptable,week-long-cpu
-#SBATCH --array=1-72
+#SBATCH --array=1-36
 #SBATCH --output=/scratch/thsiao3/output/compute_%A_%a.out
 #SBATCH --error=/scratch/thsiao3/error/compute_%A_%a.err
 

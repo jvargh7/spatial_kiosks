@@ -4,7 +4,7 @@ library(lme4)
 library(splines)
 
 if(interactive()){
-  YEAR_RANGE <- "2017-2018"
+  YEAR_RANGE <- "2017-2020"
   IND        <- "hbp_diagnosis"
   STAGE      <- "stage2"
   STATUS     <- "awareness"
@@ -21,7 +21,15 @@ if(interactive()){
 }
 
 dt <- fread(here("data/processed/high_quality_dt_after_deduplication_w_cov_Sept24.csv"), 
-            colClasses = list(character = "FIPS"))[year_range == YEAR_RANGE]
+            colClasses = list(character = "FIPS"))
+
+if(YEAR_RANGE == "2017-2020"){
+  dt <- dt[year >= 2017 & year <= 2020]
+} else if(YEAR_RANGE == "2021-2024"){
+  dt <- dt[year >= 2021 & year <= 2024]
+} else{
+  dt <- dt[year_range == YEAR_RANGE]
+}
 
 # Filter based on indicator
 prev_var <- paste0("hbp_", STAGE)
@@ -78,7 +86,8 @@ formula <- as.formula(paste0(outcome_var, " ~ ",
                     no_HS_rate + 
                     median_income + 
                     HI_coverage + 
-                    state_region"))
+                    state_region")
+          )
 
 fit.glmer <- glmer(
   formula,

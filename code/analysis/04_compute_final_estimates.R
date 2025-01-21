@@ -4,7 +4,7 @@ library(data.table)
 source(here("R", "compute_poststratification_estimates.R"))
 
 if(interactive()){
-  YEAR  <- "2019-2020"
+  YEAR  <- "2017-2020"
   STAGE <- "stage2"
   LEVEL <- "state"
 } else{
