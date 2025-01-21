@@ -1,4 +1,7 @@
 [[1]]
+[1] "Total obs: 6337"
+
+[[2]]
    age_group     n   percent
       <char> <int>     <num>
 1:     18-19   273  4.308032
@@ -6,13 +9,13 @@
 3:     45-64  2052 32.381253
 4:    65plus  2006 31.655357
 
-[[2]]
+[[3]]
    gender     n  percent
    <char> <int>    <num>
 1: Female  3479 54.89979
 2:   Male  2858 45.10021
 
-[[3]]
+[[4]]
    ethnicity     n   percent
       <char> <int>     <num>
 1:  Hispanic  1095 17.279470
@@ -21,27 +24,34 @@
 4:  NH Asian   353  5.570459
 5:  NH Other   414  6.533060
 
-[[4]]
-[1] "SBP: 122.331999346619 (18.0987076512473)"
-
 [[5]]
-[1] "DBP: 74.1364750081673 (11.0860185846521)"
+# A tibble: 16 × 7
+   stage  outcome    weighted value       se  lower  upper
+   <chr>  <chr>      <chr>    <dbl>    <dbl>  <dbl>  <dbl>
+ 1 stage1 awareness  uw       0.668 NA       NA     NA    
+ 2 stage1 controlled uw       0.424 NA       NA     NA    
+ 3 stage1 diagnosed  uw       0.367 NA       NA     NA    
+ 4 stage1 prevalence uw       0.561 NA       NA     NA    
+ 5 stage2 awareness  uw       0.857 NA       NA     NA    
+ 6 stage2 controlled uw       0.689 NA       NA     NA    
+ 7 stage2 diagnosed  uw       0.367 NA       NA     NA    
+ 8 stage2 prevalence uw       0.437 NA       NA     NA    
+ 9 stage1 awareness  w        0.621  0.0120   0.597  0.644
+10 stage1 controlled w        0.414  0.0135   0.387  0.440
+11 stage1 diagnosed  w        0.305  0.00964  0.286  0.324
+12 stage1 prevalence w        0.503  0.00985  0.484  0.522
+13 stage2 awareness  w        0.848  0.00728  0.833  0.862
+14 stage2 controlled w        0.688  0.0135   0.661  0.714
+15 stage2 diagnosed  w        0.305  0.00964  0.286  0.324
+16 stage2 prevalence w        0.368  0.0118   0.345  0.392
 
 [[6]]
-[1] "Diagnosed HTN (unweighted): 36.6577244753038"
+# A tibble: 4 × 4
+  type  weighted  mean    sd
+  <chr> <chr>    <dbl> <dbl>
+1 DBP   uw        74.1  11.1
+2 DBP   w         74.2  11.0
+3 SBP   uw       122.   18.1
+4 SBP   w        121.   17.1
 
-[[7]]
-[1] "Diagnosed HTN: 32.8633386310358"
-
-[[8]]
-[1] "Stage 1 (unweighted): 56.0606060606061"
-
-[[9]]
-[1] "Stage 1: 53.0631948064306"
-
-[[10]]
-[1] "Stage 2 (unweighted): 43.6814958091554"
-
-[[11]]
-[1] "Stage 2: 39.5585811061274"
 

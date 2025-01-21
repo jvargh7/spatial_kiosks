@@ -31,8 +31,8 @@
 # A tibble: 3 × 3
   urban        n percent
   <chr>    <int>   <dbl>
-1 urban 69092961 80.9   
-2 rural 16309067 19.1   
+1 rural 16309067 19.1   
+2 urban 69092961 80.9   
 3 <NA>     16255  0.0190
 
 [[6]]

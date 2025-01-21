@@ -34,5 +34,6 @@
 [1] "diagnosed htn unweighted: 40.8949703618613"
 
 [[7]]
-[1] "diagnosed htn weighted: 35.0763828256436"
+[1] "diagnosed htn weighted: 0.343314654192564"  
+[2] "diagnosed htn weighted: 0.00158322803149282"
 
