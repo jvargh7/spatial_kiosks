@@ -40,7 +40,7 @@ figA_pop_1000s <- ggplot() +
   xlab("") +
   ylab("") +
   # scale_fill_gradient(name="",low = "lightblue",high="darkblue",na.value="grey90",limits=c(0,100)) +
-  scale_fill_manual(name="",values=c("0 to <50" = "#E69F00","50 to <1000" ="#56B4E9","1000 to <8000" = "#FF6961"),na.value="#027324") +
+  scale_fill_manual(name="",values=c("0 to <50" = "#027324","50 to <1000" ="#56B4E9","1000 to <8000" = "#FF6961"),na.value="grey80") +
   theme(legend.position = "bottom",
         title = element_text(size = 14),
         legend.text = element_text(size = 14))
