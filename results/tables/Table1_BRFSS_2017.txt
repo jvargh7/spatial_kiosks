@@ -1,0 +1,36 @@
+[[1]]
+[1] "Total obs: 442680"
+
+[[2]]
+   age_group      n  percent
+      <char>  <int>    <num>
+1:     18-44 124684 28.16572
+2:     45-64 162062 36.60929
+3:    65plus 155934 35.22499
+
+[[3]]
+      sex      n     percent
+   <char>  <int>       <num>
+1: Female 246759 55.74207102
+2:   Male 195728 44.21433089
+3:   <NA>    193  0.04359808
+
+[[4]]
+       race      n   percent
+     <char>  <int>     <num>
+1: Hispanic  36684  8.286799
+2: NH white 332719 75.160161
+3: NH black  35107  7.930559
+4: NH asian   9646  2.179001
+5: NH other  28524  6.443481
+
+[[5]]
+[1] NA
+
+[[6]]
+[1] "diagnosed htn unweighted: 40.4224270353303"
+
+[[7]]
+[1] "diagnosed htn weighted: 0.32504200925876"   
+[2] "diagnosed htn weighted: 0.00148694752325995"
+
