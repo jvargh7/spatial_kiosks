@@ -1,0 +1,12 @@
+
+figures.R >>
+- cdc    <- data.table::fread(here("data", "raw", "CDC_PLACES.csv"), colClasses = list(character = "LocationID"))
+- dt <- fread(here("data/processed/high_quality_dt_after_deduplication_w_cov_Sept24.csv"), 
+                colClasses = list(character = "FIPS"))
+- data_est <- here("data/processed/high_quality_dt_after_deduplication_w_cov_Sept24.csv") |> 
+                  fread(colClasses = list(character = "FIPS"))
+                  
+  
+
+01_clean_data.R
+- hbp <- fread(here("data", "processed", "supplemental_hbp_Sept24.csv"))
