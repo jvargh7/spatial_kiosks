@@ -102,9 +102,11 @@ plot_pursuant_nobs      <- function(){
 }
 
 # Facet wrap county with state
-plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", level = "state", breaks = "quantile", range = "four", min = 20, mid = 50, max = 85, var = "mean"){
+plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", level = "state", breaks = "quantile", range = "four", min = 20, mid = 50, max = 85, var = "mean",
+                                    one_range = "2023-2024"){
 
-  pallette <- ifelse(outcome %in% c("prevalence", "awareness-marginal"), "YlOrRd", "Blues")
+  # palette <- ifelse(outcome %in% c("prevalence", "awareness-marginal"), "YlOrRd", "RdYlGn")
+  palette <- "YlGnBu"
   high_col <- ifelse(outcome %in% c("prevalence", "awareness-marginal"), "red", "green")
 
   # Year range
@@ -115,6 +117,9 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
                            "2019-2020",
                            "2021-2022",
                            "2023-2024"))
+  }else if (range == "one"){
+    year_ranges <- paste0(one_range)
+    
   }
 
   # Geographic level
@@ -130,6 +135,41 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
       fread(here("results", "estimates",
                  paste0(name, "_county.csv")), colClasses = list(character = "FIPS"))[, year_range := yr]
     }))
+  }else if(level=="brfss-county"){
+    
+    # dt <- fread(here("data", "raw", "CDC_PLACES.csv"), colClasses = list(character = "LocationID")) |>
+    dt <- tryCatch({fread(here("data", "raw", "CDC_PLACES.csv"), colClasses = list(character = "LocationID")) |>
+        dplyr::filter(LocationID != "59") |>
+        dplyr::filter(MeasureId == "BPHIGH") |>
+        dplyr::filter(Measure == "High blood pressure among adults") |>
+        dplyr::select(LocationID, LocationName, StateAbbr, Data_Value_Type, Data_Value, Low_Confidence_Limit, High_Confidence_Limit) |>
+        dplyr::rename(FIPS = LocationID, 
+                      state = StateAbbr,
+                      cdc_mean = Data_Value,
+                      lower = Low_Confidence_Limit,
+                      upper = High_Confidence_Limit) |>
+        dplyr::arrange(FIPS, Data_Value_Type) |>
+        dplyr::filter(Data_Value_Type == "Age-adjusted prevalence")},
+        error = function(e){
+          readRDS(paste0(path_spatial_kiosks_folder,"/working/cleaned/skbr01_high blood pressure and obesity from cdc places.RDS")) |>
+            dplyr::filter(locationid != "59") |>
+            dplyr::filter(measureid == "BPHIGH") |>
+            # dplyr::filter(measure == "High blood pressure among adults") |>
+            dplyr::select(locationid, locationname, stateabbr, data_value_type, data_value, low_confidence_limit, high_confidence_limit) |>
+            dplyr::rename(FIPS = locationid, 
+                          state = stateabbr,
+                          # cdc_mean = Data_Value,
+                          mean = data_value,
+                          lower = low_confidence_limit,
+                          upper = high_confidence_limit) |>
+            mutate(mean = as.numeric(mean),
+                   lower = as.numeric(lower),
+                   upper = as.numeric(upper)) |>
+            dplyr::arrange(FIPS, data_value_type) |>
+            dplyr::filter(data_value_type == "Age-adjusted prevalence") %>% 
+            as.data.table()
+        })
+    
   }
 
   # Adjust the weird ones where didn't become percentage
@@ -140,13 +180,14 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
 
   # Breaks: quantiles, regular intervals, or continuous from 0 to 100. Lastly, custom breaks
   if(breaks == "quantile"){
-    custom_colors <- brewer.pal(5, pallette)
-    QUANTILES <- quantile(dt$mean, seq(0, 1, .2))
+    custom_colors <- brewer.pal(5, palette)
+    QUANTILES <- stats::quantile(dt$mean, seq(0, 1, .2),na.rm=TRUE)
     QUANTILES[1] <- QUANTILES[1] - 0.001
     BREAKS <- QUANTILES
+    print(BREAKS)
   } else if(breaks == "regular"){
     # We want these to be the same as those we will use for counties
-    custom_colors <- brewer.pal(5, pallette)
+    custom_colors <- brewer.pal(5, palette)
     MIN <- min(dt$mean)-0.001
     MAX <- max(dt$mean)
     BREAKS <- seq(MIN, MAX, length.out = 6)
@@ -158,24 +199,39 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
 
   if(level == "state"){
     merge_vars <- c("STUSPS" = "state", "year_range")
-  } else if(level == "county"){
+  } else if(level %in% c("county")){
     merge_vars <- c("GEOID" = "FIPS", "year_range")
+  } else {
+    # Added for brfss-county
+    merge_vars <- c("GEOID" = "FIPS")
   }
 
   boundary_col <- ifelse(level == "state", "black", NA)
 
   dt[, hbp_groups := cut(mean, breaks = BREAKS)]
-  boundaries <- readRDS(here("data", "reference", paste0(level, "_boundaries_2022.rds")))
-  size       <- nrow(boundaries)
-  boundaries <- boundaries |>
+
+  if(level %in% c("county","brfss-county")){
+    # Added for brfss-county
+    boundaries <- readRDS(here("data", "reference", paste0("county_boundaries_2022.rds")))
+    state_boundaries <- readRDS(here("data", "reference", "state_boundaries_2022.rds"))
+  }else{
+    boundaries <- readRDS(here("data", "reference", paste0(level, "_boundaries_2022.rds")))
+  }
+
+  
+  if(level %in% c("county","state")){
+    size       <- nrow(boundaries)
+    boundaries <- boundaries |>
       slice(rep(1:n(), length(year_ranges))) |>
       mutate(year_range = rep(year_ranges, each = size)) |>
       left_join(dt, by = merge_vars)
-
-  if(level == "county"){
-    state_boundaries <- readRDS(here("data", "reference", "state_boundaries_2022.rds"))
+  }else{
+    # Added for brfss-county
+    boundaries <- boundaries |>
+      left_join(dt, by = merge_vars)
   }
-
+  
+  
   # Actual plot code
   # plt <- ggplot() +
   #     geom_sf(data=boundaries,col=boundary_col,aes(fill=hbp_groups))  +
@@ -188,28 +244,39 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
   if(outcome == "awareness-marginal" & var == "mean"){
     plt <- ggplot() +
         geom_sf(data=boundaries,col=boundary_col,aes(fill=mean))  +
-        scale_fill_distiller(palette = "RdYlBu", direction = -1, limits = c(min, max), breaks = c(25,35,45,55)) +
+        # scale_fill_distiller(palette = palette, direction = -1, limits = c(min, max), breaks = c(25,35,45,55)) +
+        scale_fill_distiller(palette = palette, direction = 1, limits = c(min, max)) +
         theme_map +
-        facet_wrap(~year_range) +
         labs(fill = paste0("Proportion (%)")) 
-  } else if(var == "mean"){
+  } else if(outcome == "prevalence" & var == "mean"){
     plt <- ggplot() +
         geom_sf(data=boundaries,col=boundary_col,aes(fill=get(var)))  +
-        scale_fill_distiller(palette = "RdYlBu", direction = -1, limits = c(min, max)) +
+        scale_fill_distiller(palette = palette, direction = 1, limits = c(min, max)) +
+        theme_map  +
+        labs(fill = paste0("Proportion (%)")) 
+  } else if( var == "mean"){
+    print(outcome)
+    print(var)
+    plt <- ggplot() +
+        geom_sf(data=boundaries,col=boundary_col,aes(fill=get(var)))  +
+        scale_fill_distiller(palette = palette, direction = 1,limits = c(min, max)) +
         theme_map +
-        facet_wrap(~year_range) +
         labs(fill = paste0("Proportion (%)")) 
   } else if(var == "se"){
     plt <- ggplot() +
         geom_sf(data=boundaries,col=boundary_col,aes(fill=get(var)))  +
         #scale_fill_continuous(limits = c(min, max)) +
         theme_map +
-        facet_wrap(~year_range) +
         labs(fill = paste0("Standard Error (%)")) 
   }
   
+  if(range %in% c("four","two")){
+    plt <- plt +
+      facet_wrap(~year_range)
+    
+  }
 
-  if(level == "county"){
+  if(level %in% c("county","brfss-county")){
     plt <- plt + geom_sf(data=state_boundaries,col="black",fill=NA)
   }
 
@@ -221,7 +288,7 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
 
 plot_brfss2021_scatter <- function(){
   # Read in CDC Places data
-  cdc <- fread(here("data", "raw", "CDC_PLACES.csv"), colClasses = list(character = "LocationID")) |>
+  cdc <- tryCatch({fread(here("data", "raw", "CDC_PLACES.csv"), colClasses = list(character = "LocationID")) |>
     dplyr::filter(LocationID != "59") |>
     dplyr::filter(MeasureId == "BPHIGH") |>
     dplyr::filter(Measure == "High blood pressure among adults") |>
@@ -232,7 +299,31 @@ plot_brfss2021_scatter <- function(){
            lower = Low_Confidence_Limit,
            upper = High_Confidence_Limit) |>
     dplyr::arrange(FIPS, Data_Value_Type) |>
-    dplyr::filter(Data_Value_Type == "Age-adjusted prevalence")
+    dplyr::filter(Data_Value_Type == "Age-adjusted prevalence")},
+    error = function(e){
+      readRDS(paste0(path_spatial_kiosks_folder,"/working/cleaned/skbr01_high blood pressure and obesity from cdc places.RDS")) |>
+        dplyr::filter(locationid != "59") |>
+        dplyr::filter(measureid == "BPHIGH") |>
+        # dplyr::filter(measure == "High blood pressure among adults") |>
+        dplyr::select(locationid, locationname, stateabbr, data_value_type, data_value, low_confidence_limit, high_confidence_limit) |>
+        dplyr::rename(FIPS = locationid, 
+                      state = stateabbr,
+                      cdc_mean = data_value,
+                      lower = low_confidence_limit,
+                      upper = high_confidence_limit) |>
+        mutate(cdc_mean = as.numeric(cdc_mean),
+               lower = as.numeric(lower),
+               upper = as.numeric(upper)) |>
+        dplyr::arrange(FIPS, data_value_type) |>
+        dplyr::filter(data_value_type == "Age-adjusted prevalence") %>% 
+        as.data.table()
+    })
+
+  
+  
+  
+  
+  
   
   # Read in corresponding Pursuant estimates. BRFSS compare to Awareness.
   est <- here("results", "estimates", "2021-2022_awareness-marginal_stage1_county.csv") |> fread(colClasses = list(character = "FIPS")) |>

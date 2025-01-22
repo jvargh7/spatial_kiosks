@@ -5,6 +5,7 @@ library(arrow)
 
 if(Sys.info()["user"]=="JVARGH7"){
   path_spatial_kiosks_folder <- "C:/Cloud/OneDrive - Emory University/Papers/Pursuant BMI BP Spatial"
+  path_spatial_kiosks_repo <- "C:/code/external/spatial_kiosks"
   
 }
 
