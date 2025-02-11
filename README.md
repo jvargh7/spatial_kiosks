@@ -1,6 +1,6 @@
 # County-level Estimation of High Blood Pressure from Observational Health Kiosk Data
 
-This repository contains all the code and data necessary to reproduce the analysis in our paper *"County-level Estimation of High Blood Pressure from Observational Health Kiosk Data"*. The analysis provides county-level estimates of hypertension prevalence across the United States, leveraging data from health kiosks from Pursuant LLC located in Walmarts and CVS's across the country, which offer a unique source of blood pressure readings.
+This repository contains all the code and data necessary to reproduce the analysis in our paper *"Prevalence, Awareness, and Control of High Blood Pressure across U.S. Counties, 2017-2024"*. The analysis provides county-level estimates of hypertension prevalence, awareness, and control across the United States, leveraging data from health kiosks from Pursuant LLC located in Walmarts and CVS's across the country, which offer a unique source of blood pressure readings.
 
 ## Problem Description
 
@@ -15,16 +15,6 @@ We employed a multilevel regression and poststratification (MRP) approach to est
 ## Repository Contents
 
 - `data/`: Contains processed data files used for the analysis.
-- `code/`: Contains all analysis and data acquisition code
+- `code/`: Contains all analysis and data acquisition code.
 - `R/`: Includes all custom functions and utilities needed for the analysis.
-- `figures/`: Scripts to generate figures and visualizations presented in the paper.
-
-## How to Reproduce the Analysis
-
-1. Clone the repository.
-2. Follow the instructions in `docs/setup.md` to install dependencies.
-3. Run the main analysis scripts in `scripts/` to reproduce the results presented in the paper.
-
-## Contact
-
-For questions or issues, please open an issue or contact the authors.
+- `results/`: Figures, tables, and estimates from the MRP model.
