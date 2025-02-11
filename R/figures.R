@@ -145,7 +145,7 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
         dplyr::select(LocationID, LocationName, StateAbbr, Data_Value_Type, Data_Value, Low_Confidence_Limit, High_Confidence_Limit) |>
         dplyr::rename(FIPS = LocationID, 
                       state = StateAbbr,
-                      cdc_mean = Data_Value,
+                      mean = Data_Value,
                       lower = Low_Confidence_Limit,
                       upper = High_Confidence_Limit) |>
         dplyr::arrange(FIPS, Data_Value_Type) |>
@@ -167,7 +167,7 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
                    upper = as.numeric(upper)) |>
             dplyr::arrange(FIPS, data_value_type) |>
             dplyr::filter(data_value_type == "Age-adjusted prevalence") %>% 
-            as.data.table()
+            data.table()
         })
     
   }
@@ -179,23 +179,23 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
   dt[, se := (upper - mean) / 1.96]
 
   # Breaks: quantiles, regular intervals, or continuous from 0 to 100. Lastly, custom breaks
-  if(breaks == "quantile"){
-    custom_colors <- brewer.pal(5, palette)
-    QUANTILES <- stats::quantile(dt$mean, seq(0, 1, .2),na.rm=TRUE)
-    QUANTILES[1] <- QUANTILES[1] - 0.001
-    BREAKS <- QUANTILES
-    print(BREAKS)
-  } else if(breaks == "regular"){
-    # We want these to be the same as those we will use for counties
-    custom_colors <- brewer.pal(5, palette)
-    MIN <- min(dt$mean)-0.001
-    MAX <- max(dt$mean)
-    BREAKS <- seq(MIN, MAX, length.out = 6)
-  } else if(breaks == "continuous"){
-
-  } else{
-
-  }
+  # if(breaks == "quantile"){
+  #   custom_colors <- brewer.pal(5, palette)
+  #   QUANTILES <- stats::quantile(dt$mean, seq(0, 1, .2),na.rm=TRUE)
+  #   QUANTILES[1] <- QUANTILES[1] - 0.001
+  #   BREAKS <- QUANTILES
+  #   print(BREAKS)
+  # } else if(breaks == "regular"){
+  #   # We want these to be the same as those we will use for counties
+  #   custom_colors <- brewer.pal(5, palette)
+  #   MIN <- min(dt$mean)-0.001
+  #   MAX <- max(dt$mean)
+  #   BREAKS <- seq(MIN, MAX, length.out = 6)
+  # } else if(breaks == "continuous"){
+  # 
+  # } else{
+  # 
+  # }
 
   if(level == "state"){
     merge_vars <- c("STUSPS" = "state", "year_range")
@@ -208,7 +208,7 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
 
   boundary_col <- ifelse(level == "state", "black", NA)
 
-  dt[, hbp_groups := cut(mean, breaks = BREAKS)]
+  # dt[, hbp_groups := cut(mean, breaks = BREAKS)]
 
   if(level %in% c("county","brfss-county")){
     # Added for brfss-county
@@ -245,13 +245,13 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
     plt <- ggplot() +
         geom_sf(data=boundaries,col=boundary_col,aes(fill=mean))  +
         # scale_fill_distiller(palette = palette, direction = -1, limits = c(min, max), breaks = c(25,35,45,55)) +
-        scale_fill_distiller(palette = palette, direction = 1, limits = c(min, max)) +
+        scale_fill_distiller(palette = palette, direction = 1, limits = c(min, max), breaks = breaks) +
         theme_map +
         labs(fill = paste0("Proportion (%)")) 
   } else if(outcome == "prevalence" & var == "mean"){
     plt <- ggplot() +
         geom_sf(data=boundaries,col=boundary_col,aes(fill=get(var)))  +
-        scale_fill_distiller(palette = palette, direction = 1, limits = c(min, max)) +
+        scale_fill_distiller(palette = palette, direction = 1, limits = c(min, max), breaks = breaks) +
         theme_map  +
         labs(fill = paste0("Proportion (%)")) 
   } else if( var == "mean"){
@@ -259,7 +259,7 @@ plot_pursuant_estimates <- function(stage = "stage2", outcome = "prevalence", le
     print(var)
     plt <- ggplot() +
         geom_sf(data=boundaries,col=boundary_col,aes(fill=get(var)))  +
-        scale_fill_distiller(palette = palette, direction = 1,limits = c(min, max)) +
+        scale_fill_distiller(palette = palette, direction = 1,limits = c(min, max), breaks = breaks) +
         theme_map +
         labs(fill = paste0("Proportion (%)")) 
   } else if(var == "se"){
@@ -318,12 +318,6 @@ plot_brfss2021_scatter <- function(){
         dplyr::filter(data_value_type == "Age-adjusted prevalence") %>% 
         as.data.table()
     })
-
-  
-  
-  
-  
-  
   
   # Read in corresponding Pursuant estimates. BRFSS compare to Awareness.
   est <- here("results", "estimates", "2021-2022_awareness-marginal_stage1_county.csv") |> fread(colClasses = list(character = "FIPS")) |>
