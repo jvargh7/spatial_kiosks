@@ -4,7 +4,8 @@ data/emory-limited-data-set-supplemental-export/*
 # History files
 .Rhistory
 .Rapp.history
-
+results/figures/supplement/*
+results/figures/paper/*
 
 # Session Data files
 .RData
