@@ -5,6 +5,7 @@ data/emory-limited-data-set-supplemental-export/*
 .Rhistory
 .Rapp.history
 
+
 # Session Data files
 .RData
 .RDataTmp

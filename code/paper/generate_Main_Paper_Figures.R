@@ -53,7 +53,7 @@ ggarrange(fig_prevalence_state_202324,
           labels = c("A","B"),
           nrow = 1,
           ncol = 2) %>% 
-  ggsave(.,filename=paste0("results/figures/paper/Figure 1 State and County Prevalence Pursuant 2023-2024.jpg"),width=12,height = 4)
+  ggsave(.,filename=paste0("results/figures/paper/Figure 1 State and County Prevalence Pursuant 2023-2024.pdf"),width=12,height = 4)
   # ggsave(.,filename=paste0("results/figures/state and county prevalence 2023-24.pdf"),width=12,height = 4)
 
 # Figure 2 ----------------------------------------------------------------
@@ -67,7 +67,7 @@ ggarrange(fig_awareness_conditional_state_202324,
           labels = LETTERS[1:4],
           nrow = 2,
           ncol = 2) %>% 
-  ggsave(.,filename=paste0("results/figures/paper/Figure 2 State and County Awareness and Control Pursuant 2023-2024.jpg"),width=12,height = 8)
+  ggsave(.,filename=paste0("results/figures/paper/Figure 2 State and County Awareness and Control Pursuant 2023-2024.pdf"),width=12,height = 8)
   # ggsave(.,filename=paste0("results/figures/state and county awareness-conditional and control 2023-24.pdf"),width=12,height = 8)
 
 # FIGURE 3 ------------------
@@ -97,7 +97,7 @@ ggarrange(ggarrange(fig_awareness_brfss_county,
           labels = c("","C"),
           nrow = 1,
           ncol = 2) %>% 
-  ggsave(.,filename=paste0("results/figures/paper/Figure 3 Awareness Marginal for BRFSS and Pursuant.jpg"),width=12,height = 8)
+  ggsave(.,filename=paste0("results/figures/paper/Figure 3 Awareness Marginal for BRFSS and Pursuant.pdf"),width=12,height = 8)
 
 
 
